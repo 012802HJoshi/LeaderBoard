@@ -1,0 +1,60 @@
+name: Deploy To VM
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          APP_DIR: ${{ secrets.VM_APP_DIR }}
+          BRANCH: ${{ github.ref_name }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VM_PORT || 22 }}
+          script_stop: true
+          envs: APP_DIR,BRANCH,ENV_FILE
+          script: |
+            set -e
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "Repository not found at $APP_DIR. Clone it once on VM first."
+              exit 1
+            fi
+
+            cd "$APP_DIR"
+            git fetch origin
+            git checkout "$BRANCH"
+            git pull origin "$BRANCH"
+
+            npm ci --omit=dev
+
+            if [ -n "$ENV_FILE" ]; then
+              printf "%s" "$ENV_FILE" > .env
+            fi
+
+            if command -v pm2 >/dev/null 2>&1; then
+              if pm2 describe leaderboard >/dev/null 2>&1; then
+                pm2 restart leaderboard --update-env
+              else
+                pm2 start npm --name leaderboard -- run start:prod
+              fi
+              pm2 save
+            else
+              pkill -f "node src/index.js" || true
+              nohup npm run start:prod > app.log 2>&1 &
+            fi
