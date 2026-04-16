@@ -1,5 +1,8 @@
 name: Deploy To VM
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "true"
+
 on:
   push:
     branches:
@@ -13,7 +16,45 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Verify required secrets are set
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          VM_APP_DIR: ${{ secrets.VM_APP_DIR }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          VM_PORT: ${{ secrets.VM_PORT }}
+        run: |
+          missing=0
+          check() {
+            name="$1"
+            val="$2"
+            if [ -z "$val" ]; then
+              echo "::error::Secret $name is missing or empty. Add it under Settings → Secrets and variables → Actions."
+              missing=1
+            else
+              echo "OK: $name is set (value hidden)"
+            fi
+          }
+          check VM_HOST "$VM_HOST"
+          check VM_USER "$VM_USER"
+          check VM_SSH_PRIVATE_KEY "$VM_SSH_PRIVATE_KEY"
+          check VM_APP_DIR "$VM_APP_DIR"
+          if [ -z "$ENV_FILE" ]; then
+            echo "::warning::ENV_FILE is empty — CI will not write .env (use a secret or manage .env on the VM)"
+          else
+            echo "OK: ENV_FILE is set (value hidden)"
+          fi
+          if [ -z "$VM_PORT" ]; then
+            echo "OK: VM_PORT not set — deploy will use default port 22"
+          else
+            echo "OK: VM_PORT is set (value hidden)"
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
 
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
