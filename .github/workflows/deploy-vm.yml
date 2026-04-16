@@ -1,7 +1,7 @@
 name: Deploy To VM
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: "true"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Verify required secrets are set
         env:
@@ -70,7 +70,7 @@ jobs:
           script_stop: true
           envs: APP_DIR,BRANCH,ENV_FILE
           script: |
-            set -e
+            set -euxo pipefail
 
             if [ ! -d "$APP_DIR/.git" ]; then
               echo "Repository not found at $APP_DIR. Clone it once on VM first."
@@ -78,6 +78,9 @@ jobs:
             fi
 
             cd "$APP_DIR"
+            echo "Deploying as user: $(whoami)"
+            node -v
+            npm -v
             git fetch origin
             git checkout "$BRANCH"
             git pull origin "$BRANCH"
@@ -89,13 +92,9 @@ jobs:
             fi
 
             if command -v pm2 >/dev/null 2>&1; then
-              if pm2 describe leaderboard >/dev/null 2>&1; then
-                pm2 restart leaderboard --update-env
-              else
-                pm2 start npm --name leaderboard -- run start:prod
-              fi
-              pm2 save
+              pm2 describe leaderboard >/dev/null 2>&1 && pm2 restart leaderboard --update-env || pm2 start npm --name leaderboard -- run start:prod
+              pm2 save || true
             else
               pkill -f "node src/index.js" || true
-              nohup npm run start:prod > app.log 2>&1 &
+              nohup npm run start:prod > app.log 2>&1 </dev/null &
             fi
