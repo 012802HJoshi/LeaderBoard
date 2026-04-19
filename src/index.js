@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import { configDotenv } from "dotenv";
-import { client } from "prom-client";
+import client from "prom-client";
 import connectDB from "./Config/connectDB.js";
 import cookieParser from "cookie-parser";
 // import { router as auth } from "./Router/auth.router.js";
