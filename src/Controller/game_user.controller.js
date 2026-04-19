@@ -77,6 +77,89 @@ export const checkAnonymousUser = async (req, res) => {
   }
 };
 
+export const getAllGameUsers = async (_req, res) => {
+  try {
+    const users = await GameUser.find({}).sort({ createdAt: -1 });
+    return res.status(200).json({
+      message: "Game users fetched successfully",
+      count: users.length,
+      users,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch game users",
+      error: error.message,
+    });
+  }
+};
+
+export const getGameUserById = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ message: "userId is required" });
+  }
+
+  try {
+    const user = await GameUser.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "user not found" });
+    }
+
+    return res.status(200).json({
+      message: "Game user fetched successfully",
+      user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to fetch user",
+      error: error.message,
+    });
+  }
+};
+
+export const deleteAllGameUsers = async (_req, res) => {
+  try {
+    const result = await GameUser.deleteMany({});
+    return res.status(200).json({
+      message: "All game users deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to delete game users",
+      error: error.message,
+    });
+  }
+};
+
+export const deleteGameUserById = async (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ message: "userId is required" });
+  }
+
+  try {
+    const deletedUser = await GameUser.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "user not found" });
+    }
+
+    return res.status(200).json({
+      message: "User deleted successfully",
+      user: deletedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Failed to delete user",
+      error: error.message,
+    });
+  }
+};
+
 export const updateGameProgress = async (req, res) => {
   const { userId ,username, levelsPlayed, coins, powerups } = req.body;
 
