@@ -13,7 +13,7 @@ import { verifyFirebaseToken } from "../Middleware/firebase_auth.middleware.js";
 
 export const gameRouter = Router();
 
-gameRouter.post("/anonymous/session", createAnonymousUser);
+gameRouter.post("/anonymous/create", createAnonymousUser);
 gameRouter.patch("/anonymous/progress", updateGameProgress);
 gameRouter.get("/anonymous/:anonymousId", checkAnonymousUser);
 gameRouter.get("/users", getAllGameUsers);
