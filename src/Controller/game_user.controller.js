@@ -58,7 +58,7 @@ export const checkAnonymousUser = async (req, res) => {
     const user = await GameUser.findOne({ anonymousId });
 
     if (!user) {
-      return res.status(404).json({
+      return res.status(204).json({
         exists: false,
         message: "Anonymous user not found",
       });
