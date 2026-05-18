@@ -28,8 +28,6 @@ export const googleCallBack= async(req,res) =>{
             headers: { Authorization: `Bearer ${access_token}` },
           });
 
-        console.log(profile);
-        
         res.status(200).send(profile).redirect('/');
     }catch(err){
         console.error('Error:', err.response.data.error);

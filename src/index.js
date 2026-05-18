@@ -26,7 +26,7 @@ application.use(express.json());
 application.use(cookieParser());
 
 // application.use('/auth',auth);
-application.use("/game", gameRouter);
+application.use("/holeking", gameRouter);
 
 application.get('/metrics', async (req, res) => {
   try {
