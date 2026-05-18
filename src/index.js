@@ -42,7 +42,7 @@ application.get("/",(req,res)=>{
 })
 
 application.listen(port,()=>{
-    console.log(`[Server]: Running application at http://localhost:${port}`);
     connectDB(mongo_url);
+    console.log(`[Server]: Running application at http://localhost:${port}`);
 })
 

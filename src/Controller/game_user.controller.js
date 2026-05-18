@@ -16,7 +16,7 @@ const normalizeNumber = (value, fallback = 0) => {
 
 export const createAnonymousUser = async (req, res) => {
   const { anonymousId, username } = req.body;
-
+  
   if (!anonymousId) {
     return res.status(400).json({ message: "anonymousId is required" });
   }
