@@ -1,44 +1,71 @@
 import jwt from "jsonwebtoken";
-import { generateToken } from "../Controller/authentication.controller.js";
+import {
+  generateAccessToken,
+  getSessionType,
+} from "../Services/auth.service.js";
+import Device from "../Model/device.model.js";
 
-export const requireAuth = (req,res,next) =>{
-    const authHeader = req.headers.authorization;
-    
-    if(!authHeader?.startsWith("Bearer ")){
-       return res.status(401).json({ message: "No token provided" });
+export const requireAuth = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "No token provided" });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  const attachUser = (decoded) => {
+    req.profileId = decoded.profileId;
+    req.sessionType = decoded.sessionType;
+    req.deviceId = decoded.deviceId;
+    next();
+  };
+
+  try {
+    attachUser(jwt.verify(token, process.env.JWT_SECRET));
+  } catch (err) {
+    if (err.name !== "TokenExpiredError") {
+      return res
+        .status(401)
+        .json({ message: "Invalid token", code: "TOKEN_INVALID" });
     }
 
-    const token = authHeader.split(" ")[1];
+    const refreshToken =
+      req.body?.refreshToken || req.cookies?.refreshToken;
 
-    try{
-        const decoded = jwt.verify(token,process.env.JWT_SECRET);
-
-        req.userId = decoded.userId;
-        next();
-
-    }catch(err){
-     if (err.name !== "TokenExpiredError") {
-      return res.status(401).json({ message: "Invalid token", code: "TOKEN_INVALID" });
+    if (!refreshToken) {
+      return res.status(401).json({
+        message: "Session expired, please login again",
+        code: "NO_REFRESH_TOKEN",
+      });
     }
 
-     const refreshToken = req.cookies?.refreshToken;
+    try {
+      const decoded = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET
+      );
 
-     if (!refreshToken) {
-      return res.status(401).json({ message: "Session expired, please login again", code: "NO_REFRESH_TOKEN" });
-    }
+      const device = await Device.findOne({ anonymousId: decoded.deviceId });
+      const sessionType = device
+        ? getSessionType(device, decoded.profileId)
+        : "anonymous";
 
-    try{
-       const decoded = jwt.verify(refreshToken,process.env.JWT_REFRESH_SECRET);
+      res.setHeader(
+        "x-new-access-token",
+        generateAccessToken(decoded.profileId, sessionType, decoded.deviceId)
+      );
 
-       const newAccessToken = generateToken(decoded.userId);
-       
-       res.setHeader("x-new-access-token", newAccessToken);
- 
-       req.userId = decoded.userId;
-       next();
-    }catch(error){
+      req.profileId = decoded.profileId;
+      req.sessionType = sessionType;
+      req.deviceId = decoded.deviceId;
+      next();
+    } catch {
       res.clearCookie("refreshToken");
-      return res.status(401).json({ message: "Session expired, please login again", code: "REFRESH_EXPIRED" });
+      return res.status(401).json({
+        message: "Session expired, please login again",
+        code: "REFRESH_EXPIRED",
+      });
     }
-    }
+  }
 };

@@ -14,7 +14,7 @@ export const provider_auth_check = async(req,res,next)=>{
         })};
         
     if (provider === "google") {
-        if(!credential){ return res.status(200).send("ID token missing");}
+        if(!credential){ return res.status(400).json({ message: "ID token missing" });}
 
         const ticket =  await client.verifyIdToken({
            idToken: credential,

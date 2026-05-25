@@ -1,8 +1,17 @@
 import { Router } from "express";
-import { googleRedirect,googleCallBack } from "../Controller/google.controller.js";
 
-
+/** Redirects legacy /google routes to web OAuth under /auth */
 export const googleRouter = Router();
 
-googleRouter.get("/",googleRedirect);
-googleRouter.get("/callback",googleCallBack);
+googleRouter.get("/", (req, res) => {
+  const query = new URLSearchParams({
+    ...req.query,
+    format: req.query.format || "redirect",
+  });
+  res.redirect(`/holeking/auth/google/start?${query.toString()}`);
+});
+
+googleRouter.get("/callback", (req, res) => {
+  const query = new URLSearchParams(req.query);
+  res.redirect(`/holeking/auth/google/callback?${query.toString()}`);
+});
