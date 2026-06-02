@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { googleRouter } from "./google.router.js";
+// import { googleRouter } from "./google.router.js";
 import { oauthRouter } from "./oauth.router.js";
 import { bootstrap, getSessionMe, refreshSession } from "../Controller/session.controller.js";
 import {
@@ -18,24 +18,20 @@ import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
 
 export const gameRouter = Router();
 
-gameRouter.use("/google", googleRouter);
-gameRouter.use("/auth", oauthRouter);
+gameRouter.use("/auth", oauthRouter); // Tested Google OAuth 
 
-gameRouter.post("/session/bootstrap", bootstrap);
-gameRouter.post("/session/refresh", refreshSession);
-gameRouter.get("/session/me", requireAuth, getSessionMe);
+gameRouter.post("/session/bootstrap", bootstrap); // Done  // Tested
+gameRouter.post("/session/refresh", refreshSession); // Done  // Tested
+gameRouter.get("/session/me", requireAuth, getSessionMe); // Done // Tested
 
-gameRouter.post("/auth/social/login", provider_auth_check, socialLogin);
-gameRouter.post(
-  "/auth/social/link",
-  requireAuth,
-  provider_auth_check,
-  socialLink
-);
-gameRouter.post("/auth/logout", requireAuth, logout);
+gameRouter.post("/auth/social/login", provider_auth_check, socialLogin);     // http://localhost:4040/holeking/auth/google/start?anonymousId=deviceIDXXX001XXX&intent=login&returnUrl=https://amezgame.com
 
-gameRouter.get("/profiles", requireAuth, listProfiles);
-gameRouter.post("/profiles/switch", requireAuth, switchProfile);
+gameRouter.post("/auth/social/link",requireAuth,provider_auth_check,socialLink); // http://localhost:4040/holeking/auth/google/start?anonymousId=deviceIDXXX001XXX&intent=link&mergeStrategy=keep_local&returnUrl=mygame://oauth
 
-gameRouter.patch("/progress", requireAuth, updateProgress);
+gameRouter.post("/auth/logout", requireAuth, logout); // Tested
+
+gameRouter.get("/profiles", requireAuth, listProfiles); // Tested
+gameRouter.post("/profiles/switch", requireAuth, switchProfile); // Tested
+
+gameRouter.patch("/progress", requireAuth, updateProgress); // Started // Tested 
 gameRouter.post("/purchase/sync", requireAuth, syncPurchase);

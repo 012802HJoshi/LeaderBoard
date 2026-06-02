@@ -4,7 +4,6 @@ import { configDotenv } from "dotenv";
 import client from "prom-client";
 import connectDB from "./Config/connectDB.js";
 import cookieParser from "cookie-parser";
-// import { router as auth } from "./Router/auth.router.js";
 import { gameRouter } from "./Router/game.router.js";
 
 configDotenv({path:(process.env.NODE_ENV ==="production" ? ".env":".env.development")});
@@ -25,7 +24,6 @@ application.use(cors({
 application.use(express.json());
 application.use(cookieParser());
 
-// application.use('/auth',auth);
 application.use("/holeking", gameRouter);
 
 application.get('/metrics', async (req, res) => {

@@ -30,8 +30,8 @@ export const requireAuth = async (req, res, next) => {
         .json({ message: "Invalid token", code: "TOKEN_INVALID" });
     }
 
-    const refreshToken =
-      req.body?.refreshToken || req.cookies?.refreshToken;
+    // const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
+    const refreshToken = req.headers["x-refresh-token"];
 
     if (!refreshToken) {
       return res.status(401).json({
@@ -50,6 +50,8 @@ export const requireAuth = async (req, res, next) => {
       const sessionType = device
         ? getSessionType(device, decoded.profileId)
         : "anonymous";
+
+        
 
       res.setHeader(
         "x-new-access-token",

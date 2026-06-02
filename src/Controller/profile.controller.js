@@ -156,7 +156,7 @@ export const updateProgress = async (req, res) => {
           const next = Math.max(
             0,
             normalizeNumber(powerups[key], profile.powerups[key])
-          );
+          ); 
           if (profile.powerups[key] !== next) {
             profile.powerups[key] = next;
             hasChanges = true;
