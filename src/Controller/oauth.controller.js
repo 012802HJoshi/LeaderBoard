@@ -144,7 +144,6 @@ const completeOAuth = (provider) => async (req, res) => {
       return res.redirect(buildUnityRedirectUrl(returnUrl, result));
     }
 
-    console.log("result", result);
     return res.status(result.status).send(renderOAuthResultPage(result));
 
   } catch (error) {

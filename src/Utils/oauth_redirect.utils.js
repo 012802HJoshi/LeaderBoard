@@ -1,23 +1,10 @@
 export const buildUnityRedirectUrl = (returnUrl, result) => {
   const url = new URL(returnUrl);
 
-  if (result.error) {
-    url.searchParams.set("error", result.error);
-    if (result.message) url.searchParams.set("message", result.message);
-    url.searchParams.set("payload", JSON.stringify(result));
-    return url.toString();
-  }
-
-  const { body } = result;
-  url.searchParams.set("needsLink", String(!!body.needsLink));
-  if (body.token) url.searchParams.set("token", body.token);
-  if (body.refreshToken) url.searchParams.set("refreshToken", body.refreshToken);
-  if (body.sessionType) url.searchParams.set("sessionType", body.sessionType);
-  if (body.needsLink && body.provider) {
-    url.searchParams.set("provider", body.provider);
-    url.searchParams.set("providerId", body.providerId);
-  }
-  url.searchParams.set("payload", JSON.stringify(body));
+  url.searchParams.set(
+      "payload",
+      encodeURIComponent(JSON.stringify(result))
+  );
 
   return url.toString();
 };
