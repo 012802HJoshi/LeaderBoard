@@ -140,6 +140,7 @@ const completeOAuth = (provider) => async (req, res) => {
         ? await handleSocialLink(anonymousId, providerUser, mergeStrategy)
         : await handleSocialLogin(anonymousId, providerUser);
 
+    
     if (returnUrl) {
       return res.redirect(buildUnityRedirectUrl(returnUrl, result));
     }

@@ -3,7 +3,7 @@ export const buildUnityRedirectUrl = (returnUrl, result) => {
 
   url.searchParams.set(
       "payload",
-      encodeURIComponent(JSON.stringify(result))
+      encodeURIComponent(JSON.stringify(result.body))
   );
 
   return url.toString();
