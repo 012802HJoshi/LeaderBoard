@@ -46,6 +46,7 @@ export const buildAuthResponse = (device, profile, sessionType) => {
       anonymousId: device.anonymousId,
       anonymousProfileId: device.anonymousProfileId,
       activeProfileId: device.activeProfileId,
+      knownProfileIds: device.knownProfileIds,
     },
   };
 };

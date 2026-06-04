@@ -32,9 +32,7 @@ export const bootstrap = async (req, res) => {
     return res.status(isNew ? 201 : 200).json({
       message: isNew ? "Session bootstrapped" : "Session restored",
       ...auth,
-      profile: formatProfile(profile),
-      hasSocialAccount: !!socialLink,
-      knownProfileIds: device.knownProfileIds,
+      profile: formatProfile(profile)
     });
   } catch (error) {
     return res.status(500).json({

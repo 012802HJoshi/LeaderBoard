@@ -19,7 +19,6 @@ export const formatProfile = (profile) => {
     source: doc.source,
     profileVersion: doc.profileVersion,
     createdAt: doc.createdAt,
-    updatedAt: doc.updatedAt,
   };
 };
 
