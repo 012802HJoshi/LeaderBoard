@@ -27,6 +27,11 @@ export const handleSocialLogin = async (anonymousId, providerUser) => {
   let device = await ensureDeviceForAnonymousId(anonymousId);
   const anonymousProfile = await GameProfile.findById(device.anonymousProfileId);
 
+  // If the user has meaningful local progress, automatically link and merge instead of prompting.
+  if (hasMeaningfulProgress(anonymousProfile)) {
+    return await handleSocialLink(anonymousId, providerUser, MERGE_STRATEGIES.MERGE_MAX);
+  }
+
   let socialLink = await SocialLink.findOne({ provider, providerId });
 
   if (socialLink) {
@@ -50,20 +55,6 @@ export const handleSocialLogin = async (anonymousId, providerUser) => {
         needsLink: false,
         ...auth,
         profile: formatProfile(cloudProfile),
-      },
-    };
-  }
-
-  if (hasMeaningfulProgress(anonymousProfile)) {
-    return {
-      status: 200,
-      body: {
-        message: "Link required before social signup",
-        needsLink: true,
-        anonymousProfileId: device.anonymousProfileId,
-        localProfile: formatProfile(anonymousProfile),
-        provider,
-        providerId,
       },
     };
   }
@@ -136,9 +127,16 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
       const anonId = device.anonymousProfileId.toString();
       const localId = localProfile._id.toString();
       if (anonId === localId && localId !== cloudProfile._id.toString()) {
-        const replacement = await GameProfile.create({
+        const cloneData = {
           source: PROFILE_SOURCES.ANONYMOUS,
-        });
+          levelsPlayed: localProfile.levelsPlayed,
+          coins: localProfile.coins,
+          isPremium: localProfile.isPremium,
+          username: localProfile.username,
+          powerups: localProfile.powerups ? { ...localProfile.powerups } : {},
+          purchases: localProfile.purchases ? [...localProfile.purchases] : [],
+        };
+        const replacement = await GameProfile.create(cloneData);
         device.anonymousProfileId = replacement._id;
         addKnownProfile(device, replacement._id);
         await GameProfile.findByIdAndDelete(localProfile._id);
@@ -171,10 +169,25 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
     mergeStrategy === MERGE_STRATEGIES.KEEP_LOCAL ||
     mergeStrategy === MERGE_STRATEGIES.MERGE_MAX
   ) {
+    const cloneData = {
+      source: PROFILE_SOURCES.ANONYMOUS,
+      levelsPlayed: localProfile.levelsPlayed,
+      coins: localProfile.coins,
+      isPremium: localProfile.isPremium,
+      username: localProfile.username,
+      powerups: localProfile.powerups ? { ...localProfile.powerups } : {},
+      purchases: localProfile.purchases ? [...localProfile.purchases] : [],
+    };
+    const replacement = await GameProfile.create(cloneData);
+
     localProfile.source = PROFILE_SOURCES.SOCIAL;
     if (name) localProfile.username = name;
     await localProfile.save();
     targetProfile = localProfile;
+    
+    device.anonymousProfileId = replacement._id;
+    addKnownProfile(device, replacement._id);
+    await device.save();
   } else {
     targetProfile = await GameProfile.create({
       source: PROFILE_SOURCES.SOCIAL,

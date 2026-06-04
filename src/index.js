@@ -36,7 +36,7 @@ application.get('/metrics', async (req, res) => {
 });
 
 application.get("/",(req,res)=>{
-    res.send("Game LeaderBoard by ExpressJs Production V 0.0.1");
+    res.send("Game LeaderBoard by ExpressJs Production v0.0.1");
 })
 
 application.listen(port,()=>{

@@ -78,6 +78,16 @@ export const logout = async (req, res) => {
       return res.status(404).json({ message: "Anonymous profile not found" });
     }
 
+    const activeProfile = await GameProfile.findById(device.activeProfileId);
+    if (activeProfile && activeProfile._id.toString() !== anonymousProfile._id.toString()) {
+      anonymousProfile.levelsPlayed = activeProfile.levelsPlayed;
+      anonymousProfile.coins = activeProfile.coins;
+      anonymousProfile.isPremium = activeProfile.isPremium;
+      anonymousProfile.powerups = activeProfile.powerups ? { ...activeProfile.powerups } : {};
+      anonymousProfile.purchases = activeProfile.purchases ? [...activeProfile.purchases] : [];
+      await anonymousProfile.save();
+    }
+
     device.activeProfileId = device.anonymousProfileId;
     device.lastSeenAt = new Date();
     await device.save();
