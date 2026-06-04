@@ -27,11 +27,14 @@ export const bootstrap = async (req, res) => {
 
     const sessionType = getSessionType(device, profile._id);
     const auth = buildAuthResponse(device, profile, sessionType);
+    const socialLink = await SocialLink.findOne({ profileId: profile._id });
 
     return res.status(isNew ? 201 : 200).json({
       message: isNew ? "Session bootstrapped" : "Session restored",
       ...auth,
       profile: formatProfile(profile),
+      hasSocialAccount: !!socialLink,
+      knownProfileIds: device.knownProfileIds,
     });
   } catch (error) {
     return res.status(500).json({
