@@ -12,6 +12,7 @@ import {
   switchProfile,
   updateProgress,
   syncPurchase,
+  deleteProfile
 } from "../Controller/profile.controller.js";
 import { requireAuth } from "../Middleware/jwt_auth.middleware.js";
 import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
@@ -34,4 +35,6 @@ gameRouter.get("/profiles", requireAuth, listProfiles); // Tested
 gameRouter.post("/profiles/switch", requireAuth, switchProfile); // Tested
 
 gameRouter.patch("/progress", requireAuth, updateProgress); // Started // Tested 
-gameRouter.post("/purchase/sync", requireAuth, syncPurchase);
+gameRouter.post("/purchase/sync", requireAuth, syncPurchase); 
+
+gameRouter.delete("/delete/profile",requireAuth,deleteProfile);
