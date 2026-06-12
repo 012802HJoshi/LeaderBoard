@@ -1,0 +1,56 @@
+config:
+  target: "http://localhost:4040"
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      name: Warm up (~40 RPS)
+    - duration: 60
+      arrivalRate: 10
+      rampTo: 250
+      name: Ramp up to 1000 RPS
+    - duration: 60
+      arrivalRate: 250
+      name: Sustained peak load (~1000 RPS)
+
+scenarios:
+  - name: "Bootstrap session, fetch current profile, and update progress"
+    flow:
+      # 1. Bootstrap anonymous session
+      - post:
+          url: "/holeking/session/bootstrap"
+          json:
+            anonymousId: "test-device-{{ $randomString(12) }}"
+          capture:
+            - json: "$.token"
+              as: "token"
+            - json: "$.profile.profileVersion"
+              as: "profileVersion"
+
+      # 2. Wait for a second (simulate user delay)
+      - think: 1
+
+      # 3. Retrieve session details
+      - get:
+          url: "/holeking/session/me"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+      # 4. Wait for a second (simulate user delay)
+      - think: 1
+
+      # 5. Update game progress
+      - patch:
+          url: "/holeking/progress"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            username: "Player_{{ $randomString(8) }}"
+            levelsPlayed: "{{ $randomNumber(1, 100) }}"
+            coins: "{{ $randomNumber(100, 5000) }}"
+            profileVersion: "{{ profileVersion }}"
+
+      # 6. Retrieve profiles
+      - get:
+          url: "/holeking/profiles"
+          headers:
+            Authorization: "Bearer {{ token }}"

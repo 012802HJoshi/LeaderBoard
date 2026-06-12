@@ -321,6 +321,11 @@ export const deleteProfile = async (req, res) => {
       }
 
       anonymousProfile.levelsPlayed = parsedLevel;
+      for (const key of POWERUP_KEYS) {
+        anonymousProfile.powerups[key] = 0;
+      }
+
+
       anonymousProfile.profileVersion += 1;
       await anonymousProfile.save();
     }
@@ -354,132 +359,3 @@ export const deleteProfile = async (req, res) => {
     });
   }
 };
-
-// export const deleteProfile = async (req,res) =>{
-//   const { profileId, deviceId } = req;
-
-//   const nextLevel = req.body?.levelsPlayed;
-
-//   try{
-//     const device = await Device.findOne({anonymousId:deviceId});
-
-//     if (!device) {
-//       return res.status(404).json({ message: "Device not found" });
-//     }
-
-//     const isKnown = device.knownProfileIds.some((id)=>{
-//       id.toString() === profileId.toString();
-//     });
-
-//     if(!isKnown){
-//       return res.status(403).json({
-//         message: "Profile not available on this device",
-//         code: "PROFILE_NOT_ON_DEVICE",
-//       });
-//     }
-
-//     const anonymousProfile = await GameProfile.findById(device.anonymousProfileId);
-
-//     if (!anonymousProfile) {
-//       return res.status(404).json({ message: "Anonymous profile not found" });
-//     }
-
-//     const isAnonymousOnly = device.anonymousProfileId.toString() === profileId.toString();
-
-//     if(isAnonymousOnly){
-//       if(nextLevel === undefined){
-//         return res.status(400).json({
-//           message: "levelsPlayed is required",
-//         });
-//       }
-    
-
-//     const parsedLevel = normalizeNumber(nextLevel, null);
-//     if (parsedLevel === null || parsedLevel < 0) {
-//         return res.status(400).json({
-//           message: "levelsPlayed must be a non-negative number",
-//         });
-//       }
-
-    
-//     anonymousProfile.levelsPlayed = parsedLevel;
-//       for (const key of POWERUP_KEYS) {
-//         anonymousProfile.powerups[key] = 0;
-//       }
-
-//     anonymousProfile.profileVersion += 1;
-//     await anonymousProfile.save();
-
-//     device.activeProfileId = device.anonymousProfileId;
-//     device.lastSeenAt = new Date();
-//     await device.save();
-
-//     const auth = buildAuthResponse(
-//       device,
-//       anonymousProfile,
-//       SESSION_TYPES.ANONYMOUS
-//     );
-
-//     return res.status(200).json({
-//         message: "Anonymous profile reset and activated",
-//         ...auth,
-//         profile: formatProfile(anonymousProfile),
-//       });
-//     }
-
-//     const deletedProfile = await GameProfile.findById(profileId);
-//     if (!deletedProfile) {
-//       return res.status(404).json({ message: "Profile not found" });
-//     }
-
-//     if (deletedProfile.source !== PROFILE_SOURCES.SOCIAL) {
-//       return res.status(400).json({
-//         message: "Only social profiles can be deleted with this endpoint",
-//         code: "PROFILE_NOT_SOCIAL",
-//       });
-//     }
-
-//     if (nextLevel !== undefined) {
-//       const parsedLevel = normalizeNumber(nextLevel, null);
-//       if (parsedLevel === null || parsedLevel < 0) {
-//         return res.status(400).json({
-//           message: "levelsPlayed must be a non-negative number",
-//         });
-//       }
-
-//       anonymousProfile.levelsPlayed = parsedLevel;
-//       anonymousProfile.profileVersion += 1;
-//       await anonymousProfile.save();
-//     }
-
-//     await SocialLink.deleteMany({ profileId });
-//     await GameProfile.findByIdAndDelete(profileId);
-
-//     device.knownProfileIds = device.knownProfileIds.filter(
-//       (id) => id.toString() !== profileId.toString()
-//     );
-    
-//     device.activeProfileId = device.anonymousProfileId;
-//     device.lastSeenAt = new Date();
-//     await device.save();
-
-//     const auth = buildAuthResponse(
-//       device,
-//       anonymousProfile,
-//       SESSION_TYPES.ANONYMOUS
-//     );
-
-//     return res.status(200).json({
-//       message: "Social profile deleted and anonymous profile activated",
-//       deletedProfileId: profileId,
-//       ...auth,
-//       profile: formatProfile(anonymousProfile),
-//     });
-    
-//   }catch(error){
-//     return res.status(500).json({
-//       message: "Failed to delete profile",
-//       error: error.message,
-//     });
-//   }
-// }
