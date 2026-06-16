@@ -21,20 +21,20 @@ export const gameRouter = Router();
 
 gameRouter.use("/auth", oauthRouter); // Tested Google OAuth 
 
-gameRouter.post("/session/bootstrap", bootstrap); // Done  // Tested
-gameRouter.post("/session/refresh", refreshSession); // Done  // Tested
-gameRouter.get("/session/me", requireAuth, getSessionMe); // Done // Tested
+gameRouter.post("/session/bootstrap", bootstrap); // Done  // Tested  //INUSE
+gameRouter.post("/session/refresh", refreshSession); // Done  // Tested  //INUSE
+gameRouter.get("/session/me", requireAuth, getSessionMe); // Done // Tested //INUSE
 
 gameRouter.post("/auth/social/login", provider_auth_check, socialLogin);     // http://localhost:4040/holeking/auth/google/start?anonymousId=deviceIDXXX001XXX&intent=login&returnUrl=https://amezgame.com
 
-gameRouter.post("/auth/social/link",requireAuth,provider_auth_check,socialLink); // http://localhost:4040/holeking/auth/google/start?anonymousId=deviceIDXXX001XXX&intent=link&mergeStrategy=keep_local&returnUrl=mygame://oauth
+gameRouter.post("/auth/social/link", requireAuth, provider_auth_check, socialLink); // http://localhost:4040/holeking/auth/google/start?anonymousId=deviceIDXXX001XXX&intent=link&mergeStrategy=keep_local&returnUrl=mygame://oauth
 
-gameRouter.post("/auth/logout", requireAuth, logout); // Tested
+gameRouter.post("/auth/logout", requireAuth, logout); // Tested  //INUSE
 
 gameRouter.get("/profiles", requireAuth, listProfiles); // Tested
 gameRouter.post("/profiles/switch", requireAuth, switchProfile); // Tested
 
 gameRouter.patch("/progress", requireAuth, updateProgress); // Started // Tested 
-gameRouter.post("/purchase/sync", requireAuth, syncPurchase); 
+gameRouter.post("/purchase/sync", requireAuth, syncPurchase);
 
-gameRouter.delete("/delete/profile",requireAuth,deleteProfile);
+gameRouter.delete("/delete/profile", requireAuth, deleteProfile);

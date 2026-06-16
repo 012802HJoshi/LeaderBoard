@@ -46,7 +46,8 @@ scenarios:
           json:
             username: "Player_{{ $randomString(8) }}"
             levelsPlayed: "{{ $randomNumber(1, 100) }}"
-            coins: "{{ $randomNumber(100, 5000) }}"
+            profileData: "{\"theme\":\"dark\",\"audio\":true}"
+            events: "first_login,tutorial_completed"
             profileVersion: "{{ profileVersion }}"
 
       # 6. Retrieve profiles

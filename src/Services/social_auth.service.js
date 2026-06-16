@@ -60,7 +60,7 @@ export const handleSocialLogin = async (anonymousId, providerUser) => {
   }
 
   const newProfile = await GameProfile.create({
-    source: PROFILE_SOURCES.SOCIAL,
+    source: PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL,
     username: name || null,
   });
 
@@ -130,11 +130,10 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
         const cloneData = {
           source: PROFILE_SOURCES.ANONYMOUS,
           levelsPlayed: localProfile.levelsPlayed,
-          coins: localProfile.coins,
-          isPremium: localProfile.isPremium,
+          inAppPurchases: localProfile.inAppPurchases,
           username: localProfile.username,
-          powerups: localProfile.powerups ? { ...localProfile.powerups } : {},
-          purchases: localProfile.purchases ? [...localProfile.purchases] : [],
+          profileData: localProfile.profileData,
+          events: localProfile.events,
         };
         const replacement = await GameProfile.create(cloneData);
         device.anonymousProfileId = replacement._id;
@@ -172,25 +171,24 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
     const cloneData = {
       source: PROFILE_SOURCES.ANONYMOUS,
       levelsPlayed: localProfile.levelsPlayed,
-      coins: localProfile.coins,
-      isPremium: localProfile.isPremium,
+      inAppPurchases: localProfile.inAppPurchases,
       username: localProfile.username,
-      powerups: localProfile.powerups ? { ...localProfile.powerups } : {},
-      purchases: localProfile.purchases ? [...localProfile.purchases] : [],
+      profileData: localProfile.profileData,
+      events: localProfile.events,
     };
     const replacement = await GameProfile.create(cloneData);
 
-    localProfile.source = PROFILE_SOURCES.SOCIAL;
+    localProfile.source = PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL;
     if (name) localProfile.username = name;
     await localProfile.save();
     targetProfile = localProfile;
-    
+
     device.anonymousProfileId = replacement._id;
     addKnownProfile(device, replacement._id);
     await device.save();
   } else {
     targetProfile = await GameProfile.create({
-      source: PROFILE_SOURCES.SOCIAL,
+      source: PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL,
       username: name || null,
     });
     const replacement = await GameProfile.create({

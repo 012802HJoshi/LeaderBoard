@@ -81,10 +81,9 @@ export const logout = async (req, res) => {
     const activeProfile = await GameProfile.findById(device.activeProfileId);
     if (activeProfile && activeProfile._id.toString() !== anonymousProfile._id.toString()) {
       anonymousProfile.levelsPlayed = activeProfile.levelsPlayed;
-      anonymousProfile.coins = activeProfile.coins;
-      anonymousProfile.isPremium = activeProfile.isPremium;
-      anonymousProfile.powerups = activeProfile.powerups ? { ...activeProfile.powerups } : {};
-      anonymousProfile.purchases = activeProfile.purchases ? [...activeProfile.purchases] : [];
+      anonymousProfile.inAppPurchases = activeProfile.inAppPurchases;
+      anonymousProfile.profileData = activeProfile.profileData;
+      anonymousProfile.events = activeProfile.events;
       await anonymousProfile.save();
     }
 

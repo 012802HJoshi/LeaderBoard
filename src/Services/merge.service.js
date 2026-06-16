@@ -1,5 +1,3 @@
-import { POWERUP_KEYS } from "../Constants/game.constants.js";
-
 export const applyMergeStrategy = (strategy, localProfile, cloudProfile) => {
   const local = localProfile.toObject
     ? localProfile.toObject()
@@ -10,51 +8,50 @@ export const applyMergeStrategy = (strategy, localProfile, cloudProfile) => {
 
   const result = {
     levelsPlayed: 0,
-    coins: 0,
-    isPremium: false,
+    inAppPurchases: false,
     username: cloud.username || local.username,
-    powerups: {},
-    purchases: [],
+    profileData: null,
+    events: null,
   };
-
-  for (const key of POWERUP_KEYS) {
-    result.powerups[key] = 0;
-  }
 
   if (strategy === "keep_cloud") {
     result.levelsPlayed = cloud.levelsPlayed;
-    result.coins = cloud.coins;
-    result.isPremium = cloud.isPremium;
+    result.inAppPurchases = cloud.inAppPurchases;
     result.username = cloud.username ?? local.username;
-    for (const key of POWERUP_KEYS) {
-      result.powerups[key] = cloud.powerups?.[key] ?? 0;
-    }
-    result.purchases = [...(cloud.purchases || [])];
+    result.profileData = cloud.profileData;
+    result.events = cloud.events;
   } else if (strategy === "keep_local") {
     result.levelsPlayed = local.levelsPlayed;
-    result.coins = local.coins;
-    result.isPremium = local.isPremium;
+    result.inAppPurchases = local.inAppPurchases;
     result.username = local.username ?? cloud.username;
-    for (const key of POWERUP_KEYS) {
-      result.powerups[key] = local.powerups?.[key] ?? 0;
-    }
-    result.purchases = [...(local.purchases || [])];
+    result.profileData = local.profileData;
+    result.events = local.events;
   } else {
     result.levelsPlayed = Math.max(local.levelsPlayed, cloud.levelsPlayed);
-    result.coins = Math.max(local.coins, cloud.coins);
-    result.isPremium = local.isPremium || cloud.isPremium;
+    result.inAppPurchases = local.inAppPurchases || cloud.inAppPurchases;
     result.username = local.username || cloud.username;
-    for (const key of POWERUP_KEYS) {
-      result.powerups[key] = Math.max(
-        local.powerups?.[key] ?? 0,
-        cloud.powerups?.[key] ?? 0
-      );
+
+    // Merge profileData: use the populated one if one is missing, otherwise select based on profileVersion
+    if (local.profileData && !cloud.profileData) {
+      result.profileData = local.profileData;
+    } else if (!local.profileData && cloud.profileData) {
+      result.profileData = cloud.profileData;
+    } else {
+      result.profileData = (localProfile.profileVersion >= cloudProfile.profileVersion)
+        ? local.profileData
+        : cloud.profileData;
     }
-    const purchaseMap = new Map();
-    for (const p of [...(local.purchases || []), ...(cloud.purchases || [])]) {
-      purchaseMap.set(`${p.productId}:${p.platform}`, p);
+
+    // Merge events: use the populated one if one is missing, otherwise select based on profileVersion
+    if (local.events && !cloud.events) {
+      result.events = local.events;
+    } else if (!local.events && cloud.events) {
+      result.events = cloud.events;
+    } else {
+      result.events = (localProfile.profileVersion >= cloudProfile.profileVersion)
+        ? local.events
+        : cloud.events;
     }
-    result.purchases = [...purchaseMap.values()];
   }
 
   return result;
@@ -62,12 +59,9 @@ export const applyMergeStrategy = (strategy, localProfile, cloudProfile) => {
 
 export const applyMergedToProfile = (profile, merged) => {
   profile.levelsPlayed = merged.levelsPlayed;
-  profile.coins = merged.coins;
-  profile.isPremium = merged.isPremium;
+  profile.inAppPurchases = merged.inAppPurchases;
   if (merged.username) profile.username = merged.username;
-  for (const key of POWERUP_KEYS) {
-    profile.powerups[key] = merged.powerups[key];
-  }
-  profile.purchases = merged.purchases;
+  profile.profileData = merged.profileData;
+  profile.events = merged.events;
   profile.profileVersion += 1;
 };

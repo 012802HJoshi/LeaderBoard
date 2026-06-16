@@ -10,6 +10,8 @@ export const POWERUP_KEYS = [
 export const SESSION_TYPES = {
   ANONYMOUS: "anonymous",
   SOCIAL: "social",
+  GOOGLE: "google",
+  FACEBOOK: "facebook",
 };
 
 export const MERGE_STRATEGIES = {
@@ -21,4 +23,6 @@ export const MERGE_STRATEGIES = {
 export const PROFILE_SOURCES = {
   ANONYMOUS: "anonymous",
   SOCIAL: "social",
+  GOOGLE: "google",
+  FACEBOOK: "facebook",
 };

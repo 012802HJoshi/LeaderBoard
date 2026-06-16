@@ -24,7 +24,7 @@ const deviceSchema = new mongoose.Schema(
     },
     lastSeenAt: { type: Date, default: Date.now },
   },
-  { timestamps: true }
+  { timestamps: false }
 );
 
 const Device = mongoose.model("Device", deviceSchema);

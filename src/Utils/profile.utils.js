@@ -1,5 +1,3 @@
-import { POWERUP_KEYS } from "../Constants/game.constants.js";
-
 export const normalizeNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -12,10 +10,9 @@ export const formatProfile = (profile) => {
     id: doc._id,
     username: doc.username,
     levelsPlayed: doc.levelsPlayed,
-    coins: doc.coins,
-    powerups: doc.powerups,
-    isPremium: doc.isPremium,
-    purchases: doc.purchases,
+    profileData: doc.profileData,
+    inAppPurchases: doc.inAppPurchases,
+    events: doc.events,
     source: doc.source,
     profileVersion: doc.profileVersion,
     createdAt: doc.createdAt,
@@ -24,11 +21,15 @@ export const formatProfile = (profile) => {
 
 export const hasMeaningfulProgress = (profile) => {
   if (!profile) return false;
-  if (profile.levelsPlayed > 0 || profile.coins > 0 || profile.isPremium) {
+  if (
+    profile.levelsPlayed > 0 ||
+    profile.inAppPurchases ||
+    (profile.profileData && profile.profileData.trim() !== "") ||
+    (profile.events && profile.events.trim() !== "")
+  ) {
     return true;
   }
-  if (!profile.powerups) return false;
-  return POWERUP_KEYS.some((key) => (profile.powerups[key] || 0) > 0);
+  return false;
 };
 
 export const addKnownProfile = (device, profileId) => {

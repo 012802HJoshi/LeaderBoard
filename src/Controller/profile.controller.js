@@ -8,7 +8,6 @@ import {
 import { setActiveProfile } from "../Services/device.service.js";
 import { formatProfile, normalizeNumber } from "../Utils/profile.utils.js";
 import {
-  POWERUP_KEYS,
   PROFILE_SOURCES,
   SESSION_TYPES,
 } from "../Constants/game.constants.js";
@@ -41,12 +40,12 @@ export const listProfiles = async (req, res) => {
           p._id.toString() === device.anonymousProfileId.toString(),
         social: social
           ? {
-              provider: social.provider,
-              providerId: social.providerId,
-              email: social.email,
-              displayName: social.displayName,
-              picture: social.picture,
-            }
+            provider: social.provider,
+            providerId: social.providerId,
+            email: social.email,
+            displayName: social.displayName,
+            picture: social.picture,
+          }
           : null,
       };
     });
@@ -109,7 +108,7 @@ export const switchProfile = async (req, res) => {
 };
 
 export const updateProgress = async (req, res) => {
-  const { username, levelsPlayed, coins, powerups, profileVersion } = req.body;
+  const { username, levelsPlayed, profileData, inAppPurchases, events, profileVersion } = req.body;
 
   try {
     const profile = await GameProfile.findById(req.profileId);
@@ -146,27 +145,19 @@ export const updateProgress = async (req, res) => {
       }
     }
 
-    if (coins !== undefined) {
-      const next = Math.max(0, normalizeNumber(coins, profile.coins));
-      if (profile.coins !== next) {
-        profile.coins = next;
-        hasChanges = true;
-      }
+    if (profileData !== undefined && profile.profileData !== profileData) {
+      profile.profileData = profileData;
+      hasChanges = true;
     }
 
-    if (powerups && typeof powerups === "object") {
-      for (const key of POWERUP_KEYS) {
-        if (powerups[key] !== undefined) {
-          const next = Math.max(
-            0,
-            normalizeNumber(powerups[key], profile.powerups[key])
-          ); 
-          if (profile.powerups[key] !== next) {
-            profile.powerups[key] = next;
-            hasChanges = true;
-          }
-        }
-      }
+    if (inAppPurchases !== undefined && profile.inAppPurchases !== inAppPurchases) {
+      profile.inAppPurchases = !!inAppPurchases;
+      hasChanges = true;
+    }
+
+    if (events !== undefined && profile.events !== events) {
+      profile.events = events;
+      hasChanges = true;
     }
 
     if (!hasChanges) {
@@ -206,17 +197,8 @@ export const syncPurchase = async (req, res) => {
       return res.status(404).json({ message: "Profile not found" });
     }
 
-    const duplicate = profile.purchases.some(
-      (p) => p.productId === productId && p.platform === platform
-    );
-
-    if (!duplicate) {
-      profile.purchases.push({
-        productId,
-        platform,
-        receiptToken: receiptToken || null,
-        purchasedAt: new Date(),
-      });
+    if (!profile.inAppPurchases) {
+      profile.inAppPurchases = true;
       profile.profileVersion += 1;
       await profile.save();
     }
@@ -277,9 +259,8 @@ export const deleteProfile = async (req, res) => {
       }
 
       anonymousProfile.levelsPlayed = parsedLevel;
-      for (const key of POWERUP_KEYS) {
-        anonymousProfile.powerups[key] = 0;
-      }
+      anonymousProfile.profileData = null;
+      anonymousProfile.events = null;
       anonymousProfile.profileVersion += 1;
       await anonymousProfile.save();
 
@@ -305,7 +286,7 @@ export const deleteProfile = async (req, res) => {
       return res.status(404).json({ message: "Profile not found" });
     }
 
-    if (deletedProfile.source !== PROFILE_SOURCES.SOCIAL) {
+    if (deletedProfile.source === PROFILE_SOURCES.ANONYMOUS) {
       return res.status(400).json({
         message: "Only social profiles can be deleted with this endpoint",
         code: "PROFILE_NOT_SOCIAL",
@@ -321,11 +302,8 @@ export const deleteProfile = async (req, res) => {
       }
 
       anonymousProfile.levelsPlayed = parsedLevel;
-      for (const key of POWERUP_KEYS) {
-        anonymousProfile.powerups[key] = 0;
-      }
-
-
+      anonymousProfile.profileData = null;
+      anonymousProfile.events = null;
       anonymousProfile.profileVersion += 1;
       await anonymousProfile.save();
     }
