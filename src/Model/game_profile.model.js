@@ -4,7 +4,7 @@ import { PROFILE_SOURCES } from "../Constants/game.constants.js";
 const gameProfileSchema = new mongoose.Schema(
   {
     username: { type: String, default: null, trim: true },
-    levelsPlayed: { type: Number, default: 0, min: 0 },
+    levelsPlayed: { type: Number, default: 1, min: 1 },
     profileData: { type: String, default: null, trim: true },
     inAppPurchases: { type: Boolean, default: false },
     events: { type: String, default: null, trim: true },

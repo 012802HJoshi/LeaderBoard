@@ -21,7 +21,6 @@ const socialLinkSchema = new mongoose.Schema(
   { timestamps: false }
 );
 
-// socialLinkSchema.index({ provider: 1, providerId: 1 }, { unique: true });
 socialLinkSchema.index({ profileId: 1 });
 
 const SocialLink = mongoose.model("SocialLink", socialLinkSchema);

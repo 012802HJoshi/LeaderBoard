@@ -123,25 +123,6 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
     applyMergedToProfile(cloudProfile, merged);
     await cloudProfile.save();
 
-    if (mergeStrategy !== MERGE_STRATEGIES.KEEP_CLOUD) {
-      const anonId = device.anonymousProfileId.toString();
-      const localId = localProfile._id.toString();
-      if (anonId === localId && localId !== cloudProfile._id.toString()) {
-        const cloneData = {
-          source: PROFILE_SOURCES.ANONYMOUS,
-          levelsPlayed: localProfile.levelsPlayed,
-          inAppPurchases: localProfile.inAppPurchases,
-          username: localProfile.username,
-          profileData: localProfile.profileData,
-          events: localProfile.events,
-        };
-        const replacement = await GameProfile.create(cloneData);
-        device.anonymousProfileId = replacement._id;
-        addKnownProfile(device, replacement._id);
-        await GameProfile.findByIdAndDelete(localProfile._id);
-      }
-    }
-
     await setActiveProfile(device, cloudProfile._id);
     const auth = buildAuthResponse(device, cloudProfile, SESSION_TYPES.SOCIAL);
 
@@ -168,35 +149,19 @@ export const handleSocialLink = async (deviceId, providerUser, mergeStrategy) =>
     mergeStrategy === MERGE_STRATEGIES.KEEP_LOCAL ||
     mergeStrategy === MERGE_STRATEGIES.MERGE_MAX
   ) {
-    const cloneData = {
-      source: PROFILE_SOURCES.ANONYMOUS,
+    targetProfile = await GameProfile.create({
+      source: PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL,
+      username: name || null,
       levelsPlayed: localProfile.levelsPlayed,
       inAppPurchases: localProfile.inAppPurchases,
-      username: localProfile.username,
       profileData: localProfile.profileData,
       events: localProfile.events,
-    };
-    const replacement = await GameProfile.create(cloneData);
-
-    localProfile.source = PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL;
-    if (name) localProfile.username = name;
-    await localProfile.save();
-    targetProfile = localProfile;
-
-    device.anonymousProfileId = replacement._id;
-    addKnownProfile(device, replacement._id);
-    await device.save();
+    });
   } else {
     targetProfile = await GameProfile.create({
       source: PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL,
       username: name || null,
     });
-    const replacement = await GameProfile.create({
-      source: PROFILE_SOURCES.ANONYMOUS,
-    });
-    device.anonymousProfileId = replacement._id;
-    addKnownProfile(device, replacement._id);
-    await device.save();
   }
 
   await SocialLink.create({

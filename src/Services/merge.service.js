@@ -9,7 +9,7 @@ export const applyMergeStrategy = (strategy, localProfile, cloudProfile) => {
   const result = {
     levelsPlayed: 0,
     inAppPurchases: false,
-    username: cloud.username || local.username,
+    username: cloud.username || null,
     profileData: null,
     events: null,
   };
@@ -17,19 +17,19 @@ export const applyMergeStrategy = (strategy, localProfile, cloudProfile) => {
   if (strategy === "keep_cloud") {
     result.levelsPlayed = cloud.levelsPlayed;
     result.inAppPurchases = cloud.inAppPurchases;
-    result.username = cloud.username ?? local.username;
+    result.username = cloud.username || null;
     result.profileData = cloud.profileData;
     result.events = cloud.events;
   } else if (strategy === "keep_local") {
     result.levelsPlayed = local.levelsPlayed;
     result.inAppPurchases = local.inAppPurchases;
-    result.username = local.username ?? cloud.username;
+    result.username = cloud.username || null;
     result.profileData = local.profileData;
     result.events = local.events;
   } else {
     result.levelsPlayed = Math.max(local.levelsPlayed, cloud.levelsPlayed);
     result.inAppPurchases = local.inAppPurchases || cloud.inAppPurchases;
-    result.username = local.username || cloud.username;
+    result.username = cloud.username || null;
 
     // Merge profileData: use the populated one if one is missing, otherwise select based on profileVersion
     if (local.profileData && !cloud.profileData) {
