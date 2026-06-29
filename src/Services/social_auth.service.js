@@ -27,11 +27,6 @@ export const handleSocialLogin = async (anonymousId, providerUser) => {
   let device = await ensureDeviceForAnonymousId(anonymousId);
   const anonymousProfile = await GameProfile.findById(device.anonymousProfileId);
 
-  // If the user has meaningful local progress, automatically link and merge instead of prompting.
-  if (hasMeaningfulProgress(anonymousProfile)) {
-    return await handleSocialLink(anonymousId, providerUser, MERGE_STRATEGIES.MERGE_MAX);
-  }
-
   let socialLink = await SocialLink.findOne({ provider, providerId });
 
   if (socialLink) {
@@ -59,9 +54,15 @@ export const handleSocialLogin = async (anonymousId, providerUser) => {
     };
   }
 
+  // Social link is not already present, new profile is being created.
+  // We copy/update the values from the anonymous profile to the new profile.
   const newProfile = await GameProfile.create({
     source: PROFILE_SOURCES[provider.toUpperCase()] || PROFILE_SOURCES.SOCIAL,
     username: name || null,
+    levelsPlayed: anonymousProfile ? anonymousProfile.levelsPlayed : undefined,
+    inAppPurchases: anonymousProfile ? anonymousProfile.inAppPurchases : undefined,
+    profileData: anonymousProfile ? anonymousProfile.profileData : undefined,
+    events: anonymousProfile ? anonymousProfile.events : undefined,
   });
 
   socialLink = await SocialLink.create({
