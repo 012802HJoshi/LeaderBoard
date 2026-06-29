@@ -6,6 +6,7 @@ import { findOrCreateDevice } from "../Services/device.service.js";
 import {
   buildAuthResponse,
   getSessionType,
+  generateAccessToken,
 } from "../Services/auth.service.js";
 import { formatProfile } from "../Utils/profile.utils.js";
 import { SESSION_TYPES } from "../Constants/game.constants.js";
@@ -29,9 +30,16 @@ export const bootstrap = async (req, res) => {
     const auth = buildAuthResponse(device, profile, sessionType);
     const socialLink = await SocialLink.findOne({ profileId: profile._id });
 
+    const anonymousToken = generateAccessToken(
+      device.anonymousProfileId,
+      SESSION_TYPES.ANONYMOUS,
+      device.anonymousId
+    );
+
     return res.status(isNew ? 201 : 200).json({
       message: isNew ? "Session bootstrapped" : "Session restored",
       ...auth,
+      anonymousToken,
       profile: formatProfile(profile)
     });
   } catch (error) {
@@ -57,12 +65,12 @@ export const getSessionMe = async (req, res) => {
       profile: formatProfile(profile),
       social: socialLink
         ? {
-            provider: socialLink.provider,
-            providerId: socialLink.providerId,
-            email: socialLink.email,
-            displayName: socialLink.displayName,
-            picture: socialLink.picture,
-          }
+          provider: socialLink.provider,
+          providerId: socialLink.providerId,
+          email: socialLink.email,
+          displayName: socialLink.displayName,
+          picture: socialLink.picture,
+        }
         : null,
     });
   } catch (error) {
