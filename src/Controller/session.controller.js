@@ -19,7 +19,6 @@ export const bootstrap = async (req, res) => {
 
   try {
     const { device, isNew } = await findOrCreateDevice(anonymousId);
-    
     // Always fetch the anonymous profile on bootstrap
     const profile = await GameProfile.findById(device.anonymousProfileId);
 
