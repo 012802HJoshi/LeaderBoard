@@ -6,7 +6,6 @@ import { findOrCreateDevice } from "../Services/device.service.js";
 import {
   buildAuthResponse,
   getSessionType,
-  generateAccessToken,
 } from "../Services/auth.service.js";
 import { formatProfile } from "../Utils/profile.utils.js";
 import { SESSION_TYPES } from "../Constants/game.constants.js";
@@ -20,26 +19,26 @@ export const bootstrap = async (req, res) => {
 
   try {
     const { device, isNew } = await findOrCreateDevice(anonymousId);
-    const profile = await GameProfile.findById(device.activeProfileId);
+    
+    // Always fetch the anonymous profile on bootstrap
+    const profile = await GameProfile.findById(device.anonymousProfileId);
 
     if (!profile) {
       return res.status(500).json({ message: "Profile not found for device" });
     }
 
-    const sessionType = getSessionType(device, profile._id);
-    const auth = buildAuthResponse(device, profile, sessionType);
-    const socialLink = await SocialLink.findOne({ profileId: profile._id });
+    // Set activeProfileId back to anonymousProfileId if it was changed
+    if (device.activeProfileId.toString() !== device.anonymousProfileId.toString()) {
+      device.activeProfileId = device.anonymousProfileId;
+      await device.save();
+    }
 
-    const anonymousToken = generateAccessToken(
-      device.anonymousProfileId,
-      SESSION_TYPES.ANONYMOUS,
-      device.anonymousId
-    );
+    const sessionType = SESSION_TYPES.ANONYMOUS;
+    const auth = buildAuthResponse(device, profile, sessionType);
 
     return res.status(isNew ? 201 : 200).json({
       message: isNew ? "Session bootstrapped" : "Session restored",
       ...auth,
-      anonymousToken,
       profile: formatProfile(profile)
     });
   } catch (error) {
