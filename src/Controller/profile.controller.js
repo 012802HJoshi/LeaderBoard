@@ -108,7 +108,15 @@ export const switchProfile = async (req, res) => {
 };
 
 export const updateProgress = async (req, res) => {
-  const { username, levelsPlayed, profileData, inAppPurchases, events, profileVersion } = req.body;
+  const body = req.body || {};
+  const playerData = body.playerData || {};
+
+  const username = body.username !== undefined ? body.username : playerData.username;
+  const levelsPlayed = body.levelsPlayed !== undefined ? body.levelsPlayed : playerData.levelsPlayed;
+  const profileData = body.profileData !== undefined ? body.profileData : playerData.profileData;
+  const inAppPurchases = body.inAppPurchases !== undefined ? body.inAppPurchases : playerData.inAppPurchases;
+  const events = body.events !== undefined ? body.events : playerData.events;
+  const profileVersion = body.profileVersion !== undefined ? body.profileVersion : playerData.profileVersion;
 
   try {
     const profile = await GameProfile.findById(req.profileId);
@@ -217,7 +225,7 @@ export const syncPurchase = async (req, res) => {
 
 export const deleteProfile = async (req, res) => {
   const { profileId, deviceId } = req;
-  const nextLevel = req.body?.levelsPlayed ?? req.body?.level;
+  const nextLevel = req.body?.levelsPlayed ?? req.body?.playerData?.levelsPlayed ?? req.body?.level;
 
   try {
     const device = await Device.findOne({ anonymousId: deviceId });

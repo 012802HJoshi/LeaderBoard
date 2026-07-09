@@ -7,15 +7,17 @@ export const formatProfile = (profile) => {
   if (!profile) return null;
   const doc = profile.toObject ? profile.toObject() : profile;
   return {
-    id: doc._id,
-    username: doc.username,
-    levelsPlayed: doc.levelsPlayed,
-    profileData: doc.profileData,
-    inAppPurchases: doc.inAppPurchases,
-    events: doc.events,
+    id: doc._id.toString(),
     source: doc.source,
     profileVersion: doc.profileVersion,
     createdAt: doc.createdAt,
+    playerData: {
+      username: doc.username,
+      levelsPlayed: doc.levelsPlayed,
+      profileData: doc.profileData,
+      events: doc.events,
+    },
+    inAppPurchases: doc.inAppPurchases,
   };
 };
 
