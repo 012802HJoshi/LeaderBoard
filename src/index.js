@@ -6,7 +6,7 @@ import connectDB from "./Config/connectDB.js";
 import cookieParser from "cookie-parser";
 import { gameRouter } from "./Router/game.router.js";
 
-configDotenv({path:(process.env.NODE_ENV ==="production" ? ".env":".env.development")});
+configDotenv({ path: (process.env.NODE_ENV === "production" ? ".env" : ".env.development") });
 
 const port = process.env.PORT;
 const mongo_url = process.env.MONGODB_URL;
@@ -35,12 +35,12 @@ application.get('/metrics', async (req, res) => {
   }
 });
 
-application.get("/",(req,res)=>{
-    res.send("Game LeaderBoard by ExpressJs Production v0.0.1");
+application.get("/", (req, res) => {
+  res.send("Game LeaderBoard by ExpressJs Production v0.0.1 New VM");
 })
 
-application.listen(port,()=>{
-    connectDB(mongo_url);
-    console.log(`[Server]: Running application at http://localhost:${port}`);
+application.listen(port, () => {
+  connectDB(mongo_url);
+  console.log(`[Server]: Running application at http://localhost:${port}`);
 })
 
