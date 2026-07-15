@@ -69,8 +69,9 @@ jobs:
             set -euxo pipefail
 
             if [ ! -d "$APP_DIR/.git" ]; then
-              echo "Repository not found at $APP_DIR. Clone it once on VM first."
-              exit 1
+              echo "Repository not found at $APP_DIR. Cloning repository..."
+              mkdir -p "$(dirname "$APP_DIR")"
+              git clone -b "$BRANCH" "git@github.com:${{ github.repository }}.git" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
