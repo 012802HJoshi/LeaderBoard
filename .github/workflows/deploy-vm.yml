@@ -100,7 +100,7 @@ jobs:
             fi
 
             if command -v pm2 >/dev/null 2>&1; then
-              pm2 describe leaderboard >/dev/null 2>&1 && pm2 restart leaderboard --update-env || pm2 start npm --name leaderboard -- run start:prod
+              pm2 describe auth >/dev/null 2>&1 && pm2 restart auth --update-env || pm2 start npm --name auth -- run start:prod
               pm2 save || true
             else
               pkill -f "node src/index.js" || true
