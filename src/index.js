@@ -38,7 +38,7 @@ application.get('/metrics', async (req, res) => {
 });
 
 application.get("/", (req, res) => {
-  res.send("Game LeaderBoard by ExpressJs Production v0.0.2");
+  res.send("Game LeaderBoard by ExpressJs Stagging v0.0.2");
 })
 
 async function startServer() {
