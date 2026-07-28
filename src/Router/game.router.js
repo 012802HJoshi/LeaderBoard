@@ -14,6 +14,12 @@ import {
   syncPurchase,
   deleteProfile
 } from "../Controller/profile.controller.js";
+import {
+  getFullLeaderboard,
+  getLeaderboard,
+  getMyRank,
+  submitScore,
+} from "../Controller/leaderboard.controller.js";
 import { requireAuth } from "../Middleware/jwt_auth.middleware.js";
 import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
 
@@ -38,3 +44,9 @@ gameRouter.patch("/progress", requireAuth, updateProgress); // Started // Tested
 gameRouter.post("/purchase/sync", requireAuth, syncPurchase);
 
 gameRouter.delete("/delete/profile", requireAuth, deleteProfile);
+
+// ──Global Leaderboard ──
+gameRouter.get("/global/leaderboard", requireAuth, getFullLeaderboard);       // Auth: combined — top50 (cached) + me + aroundMe
+gameRouter.get("/global/leaderboard/top", getLeaderboard);                    // Public: top N players
+gameRouter.get("/global/leaderboard/me", requireAuth, getMyRank);             // Auth: get my rank + players around me (?range=5)
+gameRouter.post("/global/leaderboard/level", requireAuth, submitScore);        // Auth: submit/update level to leaderboard sorted set

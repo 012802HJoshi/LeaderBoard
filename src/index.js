@@ -3,6 +3,7 @@ import cors from "cors";
 import { configDotenv } from "dotenv";
 import client from "prom-client";
 import connectDB from "./Config/connectDB.js";
+import connectRedis from "./Config/connectRedis.js";
 import cookieParser from "cookie-parser";
 import { gameRouter } from "./Router/game.router.js";
 
@@ -10,6 +11,7 @@ configDotenv({ path: (process.env.NODE_ENV === "production" ? ".env" : ".env.dev
 
 const port = process.env.PORT;
 const mongo_url = process.env.MONGODB_URL;
+const redis_url = process.env.REDIS_URL || "redis://localhost:6379";
 
 client.collectDefaultMetrics({ prefix: 'nodejs_' });
 
@@ -39,8 +41,18 @@ application.get("/", (req, res) => {
   res.send("Game LeaderBoard by ExpressJs Production v0.0.2");
 })
 
-application.listen(port, () => {
-  connectDB(mongo_url);
-  console.log(`[Server]: Running application at http://localhost:${port}`);
-})
+async function startServer() {
+  try {
+    await connectDB(mongo_url);
+    await connectRedis(redis_url);
 
+    application.listen(port, () => {
+      console.log(`[Server]: Running application at http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('[Server]: Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
