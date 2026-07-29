@@ -64,30 +64,40 @@ const getEnrichedTop50 = async () => {
 // ── Endpoints ───────────────────────────────────────────────────
 
 /**
- * GET /leaderboard?range=5
+ * GET /global/leaderboard?count=50&range=5
  * Combined endpoint — returns everything in a single response:
- *   - top50:      Cached top 50 players
+ *   - top:        Top N players (cached up to 50, customizable via ?count)
  *   - me:         Current player's rank & data (if authenticated)
- *   - aroundMe:   Players around the current player (if authenticated)
+ *   - aroundMe:   Players around the current player (range above & range below, via ?range)
  *   - totalPlayers
  */
 export const getFullLeaderboard = async (req, res) => {
     try {
         const profileId = req.profileId; // set by requireAuth (may be null for unauthenticated)
+        const count = Math.min(Math.max(parseInt(req.query.count) || 50, 1), 100);
         const range = Math.min(Math.max(parseInt(req.query.range) || 5, 1), 25);
 
-        // Always return top 50 (cached)
-        const top50 = await getEnrichedTop50();
+        // Get top players (cached if count <= 50)
+        let topList;
+        if (count <= 50) {
+            const cached = await getEnrichedTop50();
+            topList = cached.slice(0, count);
+        } else {
+            const topPlayers = await getTopPlayers(count);
+            topList = await enrichEntries(topPlayers);
+        }
+
         const totalPlayers = await getTotalPlayers();
 
         const response = {
-            top50,
+            top: topList,
+            top50: topList,
             totalPlayers,
             me: null,
             aroundMe: null,
         };
 
-        // If the player is authenticated, add their personal data
+        // If the player is authenticated, add their personal data and surrounding players
         if (profileId) {
             const { rank, levelsPlayed } = await getPlayerRank(profileId);
 
@@ -102,11 +112,9 @@ export const getFullLeaderboard = async (req, res) => {
                     profileData: profile?.profileData || null,
                 };
 
-                // Get neighbors (skip if player is already visible in top 50)
-                if (rank > 50) {
-                    const neighbors = await getPlayerNeighbors(profileId, range);
-                    response.aroundMe = await enrichEntries(neighbors, profileId);
-                }
+                // Fetch surrounding players (range above, me, range below)
+                const neighbors = await getPlayerNeighbors(profileId, range);
+                response.aroundMe = await enrichEntries(neighbors, profileId);
             }
         }
 
