@@ -91,29 +91,27 @@ export const getFullLeaderboard = async (req, res) => {
 
         const response = {
             top: topList,
-            top50: topList,
-            totalPlayers,
-            me: null,
             aroundMe: null,
         };
 
-        // If the player is authenticated, add their personal data and surrounding players
+        // If the player is authenticated, fetch surrounding players (which includes the current player)
         if (profileId) {
-            const { rank, levelsPlayed } = await getPlayerRank(profileId);
+            let neighbors = await getPlayerNeighbors(profileId, range);
 
-            if (rank !== null) {
+            // If player score is not yet in Redis sorted set, auto-sync from MongoDB profile
+            if (neighbors.length === 0) {
                 const profile = await GameProfile.findById(profileId);
+                if (profile) {
+                    await upsertScore(
+                        profile._id.toString(),
+                        profile.levelsPlayed || 1,
+                        profile.updatedAt
+                    );
+                    neighbors = await getPlayerNeighbors(profileId, range);
+                }
+            }
 
-                response.me = {
-                    rank,
-                    profileId,
-                    username: profile?.username || "Anonymous",
-                    levelsPlayed,
-                    profileData: profile?.profileData || null,
-                };
-
-                // Fetch surrounding players (range above, me, range below)
-                const neighbors = await getPlayerNeighbors(profileId, range);
+            if (neighbors.length > 0) {
                 response.aroundMe = await enrichEntries(neighbors, profileId);
             }
         }
