@@ -30,12 +30,19 @@ async function seedLeaderboard() {
       });
     }
 
-    const createdProfiles = await GameProfile.insertMany(profilesToCreate);
-    console.log(`Created ${createdProfiles.length} profiles in MongoDB.`);
+    const BATCH_SIZE = 25;
+    let totalCreated = 0;
 
-    console.log("Upserting scores into Redis sorted set...");
-    for (const profile of createdProfiles) {
-      await upsertScore(profile._id.toString(), profile.levelsPlayed, profile.updatedAt);
+    console.log("Inserting profiles into MongoDB and Redis in batches...");
+    for (let i = 0; i < profilesToCreate.length; i += BATCH_SIZE) {
+      const batch = profilesToCreate.slice(i, i + BATCH_SIZE);
+      const createdBatch = await GameProfile.insertMany(batch, { ordered: false });
+      totalCreated += createdBatch.length;
+
+      for (const profile of createdBatch) {
+        await upsertScore(profile._id.toString(), profile.levelsPlayed, profile.updatedAt);
+      }
+      console.log(`Processed ${totalCreated}/${count} profiles...`);
     }
 
     const total = await getTotalPlayers();
