@@ -1,0 +1,61 @@
+import { configDotenv } from "dotenv";
+import mongoose from "mongoose";
+import connectDB from "../Config/connectDB.js";
+import connectRedis, { getRedisClient } from "../Config/connectRedis.js";
+import GameProfile from "../Model/game_profile.model.js";
+import { upsertScore, getTotalPlayers, getTopPlayers } from "../Services/leaderboard.service.js";
+
+configDotenv({ path: process.env.NODE_ENV === "production" ? ".env" : ".env.development" });
+
+const mongo_url = process.env.MONGODB_URL || "mongodb://localhost:27017/leaderboard";
+const redis_url = process.env.REDIS_URL || "redis://localhost:6379";
+
+async function seedLeaderboard() {
+  try {
+    console.log("Connecting to MongoDB and Redis...");
+    await connectDB(mongo_url);
+    await connectRedis(redis_url);
+
+    const count = parseInt(process.argv[2] || process.env.SEED_COUNT || "200", 10);
+    console.log(`Seeding ${count} users...`);
+
+    const profilesToCreate = [];
+    for (let i = 1; i <= count; i++) {
+      // Generate levels between 10 and 1000
+      const levelsPlayed = Math.floor(Math.random() * 990) + 10;
+      profilesToCreate.push({
+        username: `Player_${String(i).padStart(3, '0')}`,
+        levelsPlayed,
+        profileData: JSON.stringify({ avatar: `avatar_${(i % 10) + 1}.png`, country: "US" }),
+      });
+    }
+
+    const createdProfiles = await GameProfile.insertMany(profilesToCreate);
+    console.log(`Created ${createdProfiles.length} profiles in MongoDB.`);
+
+    console.log("Upserting scores into Redis sorted set...");
+    for (const profile of createdProfiles) {
+      await upsertScore(profile._id.toString(), profile.levelsPlayed, profile.updatedAt);
+    }
+
+    const total = await getTotalPlayers();
+    console.log(`Total players in Redis sorted set: ${total}`);
+
+    // Fetch and display top 10 raw entries from Redis
+    const topEntries = await getTopPlayers(10);
+    console.log("\nTop 10 raw Redis entries:");
+    console.dir(topEntries, { depth: null });
+
+    const redis = getRedisClient();
+    await redis.quit();
+    await mongoose.disconnect();
+
+    console.log("\nSeeding completed successfully!");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error seeding leaderboard:", error);
+    process.exit(1);
+  }
+}
+
+seedLeaderboard();

@@ -92,12 +92,12 @@ export const getFullLeaderboard = async (req, res) => {
             aroundMe: null,
         };
 
-        // If the player is authenticated, fetch surrounding players (which includes the current player)
+        // If the player is authenticated, fetch surrounding players only if player rank is > 45
         if (profileId) {
-            let neighbors = await getPlayerNeighbors(profileId, range);
+            let { rank } = await getPlayerRank(profileId);
 
             // If player score is not yet in Redis sorted set, auto-sync from MongoDB profile
-            if (neighbors.length === 0) {
+            if (rank === null) {
                 const profile = await GameProfile.findById(profileId);
                 if (profile) {
                     await upsertScore(
@@ -105,12 +105,17 @@ export const getFullLeaderboard = async (req, res) => {
                         profile.levelsPlayed || 1,
                         profile.updatedAt
                     );
-                    neighbors = await getPlayerNeighbors(profileId, range);
+                    const updated = await getPlayerRank(profileId);
+                    rank = updated.rank;
                 }
             }
 
-            if (neighbors.length > 0) {
-                response.aroundMe = await enrichEntries(neighbors, profileId);
+            // Only fetch aroundMe if rank is > 45 (players in top 45 are already in the top list)
+            if (rank !== null && rank > 45) {
+                const neighbors = await getPlayerNeighbors(profileId, range);
+                if (neighbors.length > 0) {
+                    response.aroundMe = await enrichEntries(neighbors, profileId);
+                }
             }
         }
 

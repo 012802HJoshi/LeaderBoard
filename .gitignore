@@ -1,6 +1,5 @@
 .DS_Store
 node_modules
 .env*
-scripts
 dump.rdb
 load_test.yml
