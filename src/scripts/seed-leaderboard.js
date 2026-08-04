@@ -5,6 +5,11 @@ import connectRedis, { getRedisClient } from "../Config/connectRedis.js";
 import GameProfile from "../Model/game_profile.model.js";
 import { upsertScore, getTotalPlayers, getTopPlayers } from "../Services/leaderboard.service.js";
 
+import fs from "fs";
+
+if (fs.existsSync(".env")) {
+  configDotenv({ path: ".env" });
+}
 configDotenv({ path: process.env.NODE_ENV === "production" ? ".env" : ".env.development" });
 
 const mongo_url = process.env.MONGODB_URL || "mongodb://localhost:27017/leaderboard";
