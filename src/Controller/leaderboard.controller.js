@@ -34,9 +34,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             levelsPlayed: entry.levelsPlayed,
             profileData: profile?.profileData || null,
         };
-        if (currentProfileId) {
-            result.isMe = entry.profileId === currentProfileId;
-        }
+
         return result;
     });
 };
