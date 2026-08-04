@@ -4,7 +4,6 @@ import connectDB from "../Config/connectDB.js";
 import connectRedis, { getRedisClient } from "../Config/connectRedis.js";
 import GameProfile from "../Model/game_profile.model.js";
 import { upsertScore, getTotalPlayers, getTopPlayers } from "../Services/leaderboard.service.js";
-
 import fs from "fs";
 
 if (fs.existsSync(".env")) {
@@ -21,8 +20,16 @@ async function seedLeaderboard() {
     await connectDB(mongo_url);
     await connectRedis(redis_url);
 
+    const redis = getRedisClient();
+
     const count = parseInt(process.argv[2] || process.env.SEED_COUNT || "200", 10);
-    console.log(`Seeding ${count} users...`);
+    console.log(`Clearing existing profiles in MongoDB and Redis leaderboard keys...`);
+
+    await GameProfile.deleteMany({});
+    await redis.del("leaderboard:levels");
+    await redis.del("leaderboard:top50:cache");
+
+    console.log(`Seeding ${count} fresh users...`);
 
     const profilesToCreate = [];
     for (let i = 1; i <= count; i++) {
@@ -31,7 +38,23 @@ async function seedLeaderboard() {
       profilesToCreate.push({
         username: `Player_${String(i).padStart(3, '0')}`,
         levelsPlayed,
-        profileData: JSON.stringify({ avatar: `avatar_${(i % 10) + 1}.png`, country: "US" }),
+        profileData: JSON.stringify({
+          coins: Math.floor(Math.random() * 50000) + 10000,
+          selectedAvatar: i % 5,
+          selectedFrame: i % 3,
+          totalFirstTryWins: Math.floor(Math.random() * 20) + 1,
+          longestWinStreak: Math.floor(Math.random() * 10) + 1,
+          totalThreeStarWins: Math.floor(Math.random() * 25) + 1,
+          powerUps: {
+            holeSize: Math.floor(Math.random() * 100),
+            magnet: Math.floor(Math.random() * 50),
+            compass: Math.floor(Math.random() * 50),
+            freezeTime: Math.floor(Math.random() * 100),
+            holeBooster: Math.floor(Math.random() * 50),
+            addTime: Math.floor(Math.random() * 50),
+          },
+          unlockSkins: [18, 20],
+        }),
       });
     }
 
@@ -58,7 +81,6 @@ async function seedLeaderboard() {
     console.log("\nTop 10 raw Redis entries:");
     console.dir(topEntries, { depth: null });
 
-    const redis = getRedisClient();
     await redis.quit();
     await mongoose.disconnect();
 
