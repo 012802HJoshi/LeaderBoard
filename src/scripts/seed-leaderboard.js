@@ -4,6 +4,7 @@ import connectDB from "../Config/connectDB.js";
 import connectRedis, { getRedisClient } from "../Config/connectRedis.js";
 import GameProfile from "../Model/game_profile.model.js";
 import { upsertScore, getTotalPlayers, getTopPlayers } from "../Services/leaderboard.service.js";
+import { incrementMonthlyScore, getMonthlyTotalPlayers, getMonthlyTopPlayers, clearMonthlyLeaderboardData } from "../Services/monthly_leaderboard.service.js";
 import fs from "fs";
 
 if (fs.existsSync(".env")) {
@@ -11,8 +12,8 @@ if (fs.existsSync(".env")) {
 }
 configDotenv({ path: process.env.NODE_ENV === "production" ? ".env" : ".env.development" });
 
-const mongo_url = process.env.MONGODB_URL || "mongodb://localhost:27017/leaderboard";
-const redis_url = process.env.REDIS_URL || "redis://localhost:6379";
+const mongo_url = (process.env.MONGODB_URL || "mongodb://localhost:27017/leaderboard").trim();
+const redis_url = (process.env.REDIS_URL || "redis://localhost:6379").trim();
 
 async function seedLeaderboard() {
   try {
@@ -28,6 +29,7 @@ async function seedLeaderboard() {
     await GameProfile.deleteMany({});
     await redis.del("leaderboard:levels");
     await redis.del("leaderboard:top50:cache");
+    await clearMonthlyLeaderboardData();
 
     console.log(`Seeding ${count} fresh users...`);
 
@@ -69,17 +71,27 @@ async function seedLeaderboard() {
 
       for (const profile of createdBatch) {
         await upsertScore(profile._id.toString(), profile.levelsPlayed, profile.updatedAt);
+
+        // Seed random monthly score between 50 and 5000
+        const monthlyScore = Math.floor(Math.random() * 4950) + 50;
+        await incrementMonthlyScore(profile._id.toString(), monthlyScore);
       }
       console.log(`Processed ${totalCreated}/${count} profiles...`);
     }
 
-    const total = await getTotalPlayers();
-    console.log(`Total players in Redis sorted set: ${total}`);
+    const totalGlobal = await getTotalPlayers();
+    const totalMonthly = await getMonthlyTotalPlayers();
+    console.log(`Total players in Global Redis sorted set: ${totalGlobal}`);
+    console.log(`Total players in Monthly Redis sorted set: ${totalMonthly}`);
 
     // Fetch and display top 10 raw entries from Redis
-    const topEntries = await getTopPlayers(10);
-    console.log("\nTop 10 raw Redis entries:");
-    console.dir(topEntries, { depth: null });
+    const topGlobalEntries = await getTopPlayers(10);
+    console.log("\nTop 10 raw Global Redis entries:");
+    console.dir(topGlobalEntries, { depth: null });
+
+    const topMonthlyEntries = await getMonthlyTopPlayers(10);
+    console.log("\nTop 10 raw Monthly Redis entries:");
+    console.dir(topMonthlyEntries, { depth: null });
 
     await redis.quit();
     await mongoose.disconnect();

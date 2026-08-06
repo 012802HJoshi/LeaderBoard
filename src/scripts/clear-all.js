@@ -28,7 +28,9 @@ async function clearAll() {
     console.log("Deleting leaderboard keys from Redis...");
     await redis.del("leaderboard:levels");
     await redis.del("leaderboard:top50:cache");
-    console.log("Cleared Redis keys ('leaderboard:levels', 'leaderboard:top50:cache').");
+    await redis.del("leaderboard:monthly");
+    await redis.del("leaderboard:monthly:top50:cache");
+    console.log("Cleared Redis keys ('leaderboard:levels', 'leaderboard:top50:cache', 'leaderboard:monthly', 'leaderboard:monthly:top50:cache').");
 
     await redis.quit();
     await mongoose.disconnect();
