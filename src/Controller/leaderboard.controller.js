@@ -47,9 +47,9 @@ const enrichEntries = async (entries, currentProfileId = null) => {
 const getEnrichedTop50 = async () => {
     // Try cache first
     const cached = await getCachedTop50();
-    if (cached) return cached;
+    if (cached && (cached.length === 0 || cached[0].username !== undefined)) return cached;
 
-    // Cache miss — build from Redis + MongoDB
+    // Cache miss or legacy un-enriched cache format — build from Redis + MongoDB
     const topPlayers = await getTopPlayers(50);
     const enriched = await enrichEntries(topPlayers);
 
