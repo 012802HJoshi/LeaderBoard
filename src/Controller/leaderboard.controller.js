@@ -90,6 +90,7 @@ export const getFullLeaderboard = async (req, res) => {
         const response = {
             top: topList,
             aroundMe: null,
+            totalPlayers,
         };
 
         // If the player is authenticated, fetch surrounding players only if player rank is > 45

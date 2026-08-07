@@ -1,3 +1,4 @@
+import GameProfile from "../Model/game_profile.model.js";
 import {
     getMonthlyTopPlayers,
     getMonthlyPlayerRank,
@@ -10,6 +11,34 @@ import {
 } from "../Services/monthly_leaderboard.service.js";
 
 /**
+ * Enrich raw monthly leaderboard entries with profile data from MongoDB.
+ *
+ * @param {Array} entries - Raw entries from Redis ({ profileId, score, rank })
+ * @param {string|null} currentProfileId - The requesting player's profileId
+ * @returns {Promise<Array>}
+ */
+const enrichEntries = async (entries, currentProfileId = null) => {
+    if (!entries.length) return [];
+
+    const profileIds = entries.map((p) => p.profileId);
+    const profiles = await GameProfile.find({ _id: { $in: profileIds } });
+    const profileMap = new Map(
+        profiles.map((p) => [p._id.toString(), p])
+    );
+
+    return entries.map((entry) => {
+        const profile = profileMap.get(entry.profileId);
+        return {
+            rank: entry.rank,
+            profileId: entry.profileId,
+            username: profile?.username || "Anonymous",
+            score: entry.score,
+            profileData: profile?.profileData || null,
+        };
+    });
+};
+
+/**
  * Fetch top-50 monthly leaderboard with cache.
  */
 const getMonthlyTop50 = async () => {
@@ -17,9 +46,11 @@ const getMonthlyTop50 = async () => {
     if (cached) return cached;
 
     const topPlayers = await getMonthlyTopPlayers(50);
-    await setCachedMonthlyTop50(topPlayers);
+    const enriched = await enrichEntries(topPlayers);
 
-    return topPlayers;
+    await setCachedMonthlyTop50(enriched);
+
+    return enriched;
 };
 
 // ── Endpoints ───────────────────────────────────────────────────
@@ -39,7 +70,8 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
             const cached = await getMonthlyTop50();
             topList = cached.slice(0, count);
         } else {
-            topList = await getMonthlyTopPlayers(count);
+            const topPlayers = await getMonthlyTopPlayers(count);
+            topList = await enrichEntries(topPlayers);
         }
 
         const totalPlayers = await getMonthlyTotalPlayers();
@@ -55,7 +87,7 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
             if (rank !== null && rank > 45) {
                 const neighbors = await getMonthlyPlayerNeighbors(profileId, range);
                 if (neighbors.length > 0) {
-                    response.aroundMe = neighbors;
+                    response.aroundMe = await enrichEntries(neighbors, profileId);
                 }
             }
         }
@@ -85,7 +117,8 @@ export const getMonthlyLeaderboardTop = async (req, res) => {
             });
         }
 
-        const leaderboard = await getMonthlyTopPlayers(count);
+        const topPlayers = await getMonthlyTopPlayers(count);
+        const leaderboard = await enrichEntries(topPlayers);
 
         return res.status(200).json({
             leaderboard,
@@ -116,17 +149,21 @@ export const getMyMonthlyRank = async (req, res) => {
             });
         }
 
+        const profile = await GameProfile.findById(profileId);
         const neighbors = await getMonthlyPlayerNeighbors(profileId, range);
+        const aroundMe = await enrichEntries(neighbors, profileId);
 
         const me = {
             rank,
             profileId,
+            username: profile?.username || "Anonymous",
             score,
+            profileData: profile?.profileData || null,
         };
 
         return res.status(200).json({
             me,
-            aroundMe: neighbors,
+            aroundMe,
             totalPlayers: await getMonthlyTotalPlayers(),
         });
     } catch (error) {
