@@ -1,5 +1,4 @@
 import { getRedisClient } from "../Config/connectRedis.js";
-import MonthlyWinner from "../Model/monthly_winner.model.js";
 
 const MONTHLY_LEADERBOARD_KEY = "leaderboard:monthly";
 const MONTHLY_TOP50_CACHE_KEY = "leaderboard:monthly:top50:cache";
@@ -151,36 +150,10 @@ export const getMonthlyTotalPlayers = async () => {
 };
 
 /**
- * Clear all monthly leaderboard data (sorted set & top 50 cache),
- * after saving top 3 winners' profile IDs & scores into MongoDB.
- *
- * @returns {Promise<Object|null>} The archived monthly winner record if top players existed
+ * Clear all monthly leaderboard data (sorted set & top 50 cache).
  */
 export const clearMonthlyLeaderboardData = async () => {
     const redis = getRedisClient();
-
-    // Fetch top 3 players before clearing
-    const top3 = await getMonthlyTopPlayers(3);
-
-    let savedWinnerRecord = null;
-    if (top3.length > 0) {
-        const now = new Date();
-        const monthStr = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-
-        savedWinnerRecord = await MonthlyWinner.create({
-            month: monthStr,
-            winners: top3.map((player) => ({
-                rank: player.rank,
-                profileId: player.profileId,
-                score: player.score,
-            })),
-            clearedAt: now,
-        });
-    }
-
     await redis.del(MONTHLY_LEADERBOARD_KEY);
     await redis.del(MONTHLY_TOP50_CACHE_KEY);
-
-    return savedWinnerRecord;
 };
-
