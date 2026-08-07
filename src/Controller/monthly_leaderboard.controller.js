@@ -32,7 +32,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             rank: entry.rank,
             profileId: entry.profileId,
             username: profile?.username || "Anonymous",
-            score: entry.score,
+            value: entry.score,
             profileData: profile?.profileData || null,
         };
     });
@@ -43,7 +43,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
  */
 const getMonthlyTop50 = async () => {
     const cached = await getCachedMonthlyTop50();
-    if (cached && (cached.length === 0 || cached[0].username !== undefined)) return cached;
+    if (cached && (cached.length === 0 || cached[0].value !== undefined)) return cached;
 
     const topPlayers = await getMonthlyTopPlayers(50);
     const enriched = await enrichEntries(topPlayers);
@@ -157,7 +157,7 @@ export const getMyMonthlyRank = async (req, res) => {
             rank,
             profileId,
             username: profile?.username || "Anonymous",
-            score,
+            value: score,
             profileData: profile?.profileData || null,
         };
 

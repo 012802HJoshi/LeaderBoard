@@ -31,7 +31,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             rank: entry.rank,
             profileId: entry.profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed: entry.levelsPlayed,
+            value: entry.levelsPlayed,
             profileData: profile?.profileData || null,
         };
 
@@ -47,7 +47,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
 const getEnrichedTop50 = async () => {
     // Try cache first
     const cached = await getCachedTop50();
-    if (cached && (cached.length === 0 || cached[0].username !== undefined)) return cached;
+    if (cached && (cached.length === 0 || cached[0].value !== undefined)) return cached;
 
     // Cache miss or legacy un-enriched cache format — build from Redis + MongoDB
     const topPlayers = await getTopPlayers(50);
@@ -186,7 +186,7 @@ export const getMyRank = async (req, res) => {
             rank,
             profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed,
+            value: levelsPlayed,
             profileData: profile?.profileData || null,
         };
 
