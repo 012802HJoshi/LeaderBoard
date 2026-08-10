@@ -8,8 +8,7 @@ export const generateAccessToken = (profileId, sessionType, deviceId) => {
       sessionType,
       deviceId,
     },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
+    process.env.JWT_SECRET
   );
 };
 
@@ -19,8 +18,7 @@ export const generateRefreshToken = (profileId, deviceId) => {
       profileId: profileId.toString(),
       deviceId,
     },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "30d" }
+    process.env.JWT_REFRESH_SECRET
   );
 };
 
