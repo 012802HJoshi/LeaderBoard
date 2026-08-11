@@ -10,6 +10,8 @@ import {
     setCachedMonthlyTop50,
     incrementMonthlyScore,
     clearMonthlyLeaderboardData,
+    getPreviousMonthTop50,
+    setPreviousMonthTop50,
 } from "../Services/monthly_leaderboard.service.js";
 
 /**
@@ -266,17 +268,40 @@ export const getMonthlyWinners = async (req, res) => {
 };
 
 /**
+ * GET /monthly/leaderboard/previous
+ * Public endpoint returning previous month's top 50 players stored in Redis.
+ */
+export const getPreviousMonthlyLeaderboardTop = async (req, res) => {
+    try {
+        const previousTop = await getPreviousMonthTop50();
+        return res.status(200).json({
+            previousTop: previousTop || [],
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to fetch previous month's leaderboard",
+            error: error.message,
+        });
+    }
+};
+
+/**
  * DELETE /monthly/leaderboard/clear
  * Clear all monthly leaderboard data from Redis sorted set and top 50 cache.
- * Archives current top 3 players to MonthlyWinner before clearing.
- * Requires authentication.
+ * Stores current top 50 as JSON in Redis (replacing previous month's data)
+ * and archives top 3 players to MonthlyWinner MongoDB collection before clearing.
  */
 export const clearMonthlyLeaderboard = async (req, res) => {
     try {
-        const topPlayers = await getMonthlyTopPlayers(3);
-        if (topPlayers && topPlayers.length > 0) {
+        const top50Players = await getMonthlyTopPlayers(50);
+        if (top50Players && top50Players.length > 0) {
+            // Enrich top 50 with username & profileData and store in Redis as JSON (replacing old previous month top 50)
+            const enrichedTop50 = await enrichEntries(top50Players);
+            await setPreviousMonthTop50(enrichedTop50);
+
+            // Archive top 3 in MonthlyWinner MongoDB model
             const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
-            const validWinners = topPlayers
+            const validWinners = top50Players
                 .filter((p) => mongoose.Types.ObjectId.isValid(p.profileId))
                 .slice(0, 3)
                 .map((p) => ({
@@ -296,7 +321,7 @@ export const clearMonthlyLeaderboard = async (req, res) => {
         await clearMonthlyLeaderboardData();
 
         return res.status(200).json({
-            message: "Monthly leaderboard cleared and winners archived successfully",
+            message: "Monthly leaderboard cleared, previous month top 50 stored in Redis, and winners archived successfully",
         });
     } catch (error) {
         return res.status(500).json({

@@ -2,6 +2,7 @@ import { getRedisClient } from "../Config/connectRedis.js";
 
 const MONTHLY_LEADERBOARD_KEY = "leaderboard:monthly";
 const MONTHLY_TOP50_CACHE_KEY = "leaderboard:monthly:top50:cache";
+const PREVIOUS_MONTH_TOP50_KEY = "leaderboard:monthly:previous_top50";
 
 const MULTIPLIER = 10_000_000_000; // 10^10
 
@@ -44,6 +45,23 @@ export const getCachedMonthlyTop50 = async () => {
 export const setCachedMonthlyTop50 = async (enrichedData) => {
     const redis = getRedisClient();
     await redis.set(MONTHLY_TOP50_CACHE_KEY, JSON.stringify(enrichedData));
+};
+
+/**
+ * Get previous month's top 50 stored in Redis.
+ */
+export const getPreviousMonthTop50 = async () => {
+    const redis = getRedisClient();
+    const cached = await redis.get(PREVIOUS_MONTH_TOP50_KEY);
+    return cached ? JSON.parse(cached) : null;
+};
+
+/**
+ * Set (overwrite) previous month's top 50 in Redis as JSON.
+ */
+export const setPreviousMonthTop50 = async (enrichedData) => {
+    const redis = getRedisClient();
+    await redis.set(PREVIOUS_MONTH_TOP50_KEY, JSON.stringify(enrichedData));
 };
 
 /**
