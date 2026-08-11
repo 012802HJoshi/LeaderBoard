@@ -70,7 +70,7 @@ gameRouter.post("/monthly/leaderboard/score", requireAuth, submitMonthlyScore); 
 
 // Auth: clear monthly leaderboard data
 
-gameRouter.delete("/monthly/leaderboard/clear", requireAuth, clearMonthlyLeaderboard);
+gameRouter.delete("/monthly/leaderboard/clear", clearMonthlyLeaderboard);
 
 
 // Public alias: get all monthly winners
