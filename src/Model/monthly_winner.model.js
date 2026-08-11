@@ -11,11 +11,9 @@ const winnerEntrySchema = new mongoose.Schema(
 
 const monthlyWinnerSchema = new mongoose.Schema(
   {
-    month: { type: String, required: true }, // e.g. "2026-08"
-    winners: [winnerEntrySchema],
-    clearedAt: { type: Date, default: Date.now },
-  },
-  { timestamps: true }
+    month: { type: String, required: true },
+    winners: [winnerEntrySchema]
+  }
 );
 
 const MonthlyWinner = mongoose.model("MonthlyWinner", monthlyWinnerSchema);

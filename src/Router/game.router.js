@@ -26,6 +26,7 @@ import {
   getMyMonthlyRank,
   submitMonthlyScore,
   clearMonthlyLeaderboard,
+  getMonthlyWinners,
 } from "../Controller/monthly_leaderboard.controller.js";
 import { requireAuth } from "../Middleware/jwt_auth.middleware.js";
 import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
@@ -63,5 +64,16 @@ gameRouter.get("/monthly/leaderboard", requireAuth, getFullMonthlyLeaderboard); 
 gameRouter.get("/monthly/leaderboard/top", getMonthlyLeaderboardTop);             // Public: top N players
 gameRouter.get("/monthly/leaderboard/me", requireAuth, getMyMonthlyRank);         // Auth: get my rank + players around me (?range=5)
 gameRouter.post("/monthly/leaderboard/score", requireAuth, submitMonthlyScore);   // Auth: submit/increment score in monthly sorted set
-gameRouter.delete("/monthly/leaderboard/clear", requireAuth, clearMonthlyLeaderboard); // Auth: clear monthly leaderboard data
 
+
+
+
+// Auth: clear monthly leaderboard data
+
+gameRouter.delete("/monthly/leaderboard/clear", requireAuth, clearMonthlyLeaderboard);
+
+
+// Public alias: get all monthly winners
+
+gameRouter.get("/monthly/winners", getMonthlyWinners);                              // Public: get all monthly winners (with profileData & username)
+gameRouter.get("/monthly/leaderboard/winners", getMonthlyWinners);                  

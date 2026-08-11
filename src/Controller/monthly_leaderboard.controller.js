@@ -1,4 +1,6 @@
 import GameProfile from "../Model/game_profile.model.js";
+import MonthlyWinner from "../Model/monthly_winner.model.js";
+import mongoose from "mongoose";
 import {
     getMonthlyTopPlayers,
     getMonthlyPlayerRank,
@@ -217,16 +219,83 @@ export const submitMonthlyScore = async (req, res) => {
 };
 
 /**
+ * GET /monthly/winners
+ * Fetch all monthly winners, populated with profileData and username.
+ * Supports optional ?month=YYYY-MM filter.
+ */
+export const getMonthlyWinners = async (req, res) => {
+    try {
+        const { month } = req.query;
+        const query = month ? { month } : {};
+
+        const monthlyWinnersDocs = await MonthlyWinner.find(query)
+            .populate({
+                path: "winners.profileId",
+                select: "username profileData",
+            })
+            .sort({ month: -1 });
+
+        const monthlyWinners = monthlyWinnersDocs.map((doc) => {
+            const docObj = doc.toObject ? doc.toObject() : doc;
+            return {
+                _id: docObj._id,
+                month: docObj.month,
+                winners: (docObj.winners || []).map((w) => {
+                    const profile = w.profileId && typeof w.profileId === "object" ? w.profileId : null;
+                    return {
+                        rank: w.rank,
+                        profileId: profile ? profile._id : w.profileId,
+                        username: profile?.username || "Anonymous",
+                        profileData: profile?.profileData || null,
+                        score: w.score,
+                    };
+                }),
+            };
+        });
+
+        return res.status(200).json({
+            count: monthlyWinners.length,
+            monthlyWinners,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to fetch monthly winners",
+            error: error.message,
+        });
+    }
+};
+
+/**
  * DELETE /monthly/leaderboard/clear
  * Clear all monthly leaderboard data from Redis sorted set and top 50 cache.
+ * Archives current top players to MonthlyWinner before clearing.
  * Requires authentication.
  */
 export const clearMonthlyLeaderboard = async (req, res) => {
     try {
+        const topPlayers = await getMonthlyTopPlayers(100);
+        if (topPlayers && topPlayers.length > 0) {
+            const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
+            const validWinners = topPlayers
+                .filter((p) => mongoose.Types.ObjectId.isValid(p.profileId))
+                .map((p) => ({
+                    rank: p.rank,
+                    profileId: p.profileId,
+                    score: p.score,
+                }));
+
+            if (validWinners.length > 0) {
+                await MonthlyWinner.create({
+                    month: currentMonth,
+                    winners: validWinners,
+                });
+            }
+        }
+
         await clearMonthlyLeaderboardData();
 
         return res.status(200).json({
-            message: "Monthly leaderboard cleared successfully",
+            message: "Monthly leaderboard cleared and winners archived successfully",
         });
     } catch (error) {
         return res.status(500).json({
@@ -235,3 +304,4 @@ export const clearMonthlyLeaderboard = async (req, res) => {
         });
     }
 };
+
