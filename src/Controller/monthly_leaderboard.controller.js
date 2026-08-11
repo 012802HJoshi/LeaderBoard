@@ -220,7 +220,7 @@ export const submitMonthlyScore = async (req, res) => {
 
 /**
  * GET /monthly/winners
- * Fetch all monthly winners, populated with profileData and username.
+ * Fetch all monthly winners (top 3 for each month), populated with profileData and username.
  * Supports optional ?month=YYYY-MM filter.
  */
 export const getMonthlyWinners = async (req, res) => {
@@ -240,7 +240,7 @@ export const getMonthlyWinners = async (req, res) => {
             return {
                 _id: docObj._id,
                 month: docObj.month,
-                winners: (docObj.winners || []).map((w) => {
+                winners: (docObj.winners || []).slice(0, 3).map((w) => {
                     const profile = w.profileId && typeof w.profileId === "object" ? w.profileId : null;
                     return {
                         rank: w.rank,
@@ -268,16 +268,17 @@ export const getMonthlyWinners = async (req, res) => {
 /**
  * DELETE /monthly/leaderboard/clear
  * Clear all monthly leaderboard data from Redis sorted set and top 50 cache.
- * Archives current top players to MonthlyWinner before clearing.
+ * Archives current top 3 players to MonthlyWinner before clearing.
  * Requires authentication.
  */
 export const clearMonthlyLeaderboard = async (req, res) => {
     try {
-        const topPlayers = await getMonthlyTopPlayers(100);
+        const topPlayers = await getMonthlyTopPlayers(3);
         if (topPlayers && topPlayers.length > 0) {
             const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
             const validWinners = topPlayers
                 .filter((p) => mongoose.Types.ObjectId.isValid(p.profileId))
+                .slice(0, 3)
                 .map((p) => ({
                     rank: p.rank,
                     profileId: p.profileId,
