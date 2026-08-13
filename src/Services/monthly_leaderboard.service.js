@@ -175,3 +175,14 @@ export const clearMonthlyLeaderboardData = async () => {
     await redis.del(MONTHLY_LEADERBOARD_KEY);
     await redis.del(MONTHLY_TOP50_CACHE_KEY);
 };
+
+/**
+ * Get end time of current UTC calendar month (ISO string).
+ * e.g., for August 2026, returns 2026-09-01T00:00:00.000Z
+ */
+export const getMonthlyEndTime = () => {
+    const now = new Date();
+    const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0));
+    return endOfMonth.toISOString();
+};
+

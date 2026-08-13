@@ -12,6 +12,7 @@ import {
     clearMonthlyLeaderboardData,
     getPreviousMonthTop50,
     setPreviousMonthTop50,
+    getMonthlyEndTime,
 } from "../Services/monthly_leaderboard.service.js";
 
 /**
@@ -61,7 +62,7 @@ const getMonthlyTop50 = async () => {
 
 /**
  * GET /monthly/leaderboard?count=50&range=5
- * Combined endpoint returning top list, player rank/neighborhood, and total players.
+ * Combined endpoint returning top list, player rank/neighborhood, total players, and endTime.
  */
 export const getFullMonthlyLeaderboard = async (req, res) => {
     try {
@@ -84,6 +85,7 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
             top: topList,
             aroundMe: null,
             totalPlayers,
+            endTime: getMonthlyEndTime(),
         };
 
         if (profileId) {
@@ -107,17 +109,19 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
 
 /**
  * GET /monthly/leaderboard/top?count=10
- * Public endpoint returning top N players on the monthly leaderboard.
+ * Public endpoint returning top N players on the monthly leaderboard and endTime.
  */
 export const getMonthlyLeaderboardTop = async (req, res) => {
     try {
         const count = Math.min(Math.max(parseInt(req.query.count) || 10, 1), 100);
+        const endTime = getMonthlyEndTime();
 
         if (count <= 50) {
             const cached = await getMonthlyTop50();
             return res.status(200).json({
                 leaderboard: cached.slice(0, count),
                 totalPlayers: await getMonthlyTotalPlayers(),
+                endTime,
             });
         }
 
@@ -127,6 +131,7 @@ export const getMonthlyLeaderboardTop = async (req, res) => {
         return res.status(200).json({
             leaderboard,
             totalPlayers: await getMonthlyTotalPlayers(),
+            endTime,
         });
     } catch (error) {
         return res.status(500).json({
@@ -138,7 +143,7 @@ export const getMonthlyLeaderboardTop = async (req, res) => {
 
 /**
  * GET /monthly/leaderboard/me?range=5
- * Authenticated endpoint returning current player's monthly rank and neighborhood.
+ * Authenticated endpoint returning current player's monthly rank, neighborhood, and endTime.
  */
 export const getMyMonthlyRank = async (req, res) => {
     try {
@@ -150,6 +155,7 @@ export const getMyMonthlyRank = async (req, res) => {
         if (rank === null) {
             return res.status(404).json({
                 message: "Player not found on the monthly leaderboard",
+                endTime: getMonthlyEndTime(),
             });
         }
 
@@ -169,7 +175,9 @@ export const getMyMonthlyRank = async (req, res) => {
             me,
             aroundMe,
             totalPlayers: await getMonthlyTotalPlayers(),
+            endTime: getMonthlyEndTime(),
         });
+
     } catch (error) {
         return res.status(500).json({
             message: "Failed to fetch player rank and neighborhood",
