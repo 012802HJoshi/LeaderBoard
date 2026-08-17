@@ -1,37 +1,88 @@
-import { Logtail } from "@logtail/node";
+let config = null;
 
-let logtail = null;
+function getConfig() {
+  if (config) return config;
 
-function getLogtail() {
-  if (!logtail && process.env.LOGTAIL_SOURCE_TOKEN) {
-    const token = process.env.LOGTAIL_SOURCE_TOKEN;
-    const endpoint = process.env.LOGTAIL_ENDPOINT;
-    const options = endpoint ? { endpoint } : {};
-    logtail = new Logtail(token, options);
+  const endpoint = process.env.LOGTAIL_ENDPOINT ? process.env.LOGTAIL_ENDPOINT.trim() : null;
+  const token = process.env.LOGTAIL_SOURCE_TOKEN ? process.env.LOGTAIL_SOURCE_TOKEN.trim() : null;
+
+  if (endpoint) {
+    try {
+      const parsed = new URL(endpoint);
+      const authToken = parsed.username || token;
+      parsed.username = "";
+      parsed.password = "";
+      const headers = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
+      config = {
+        url: parsed.toString(),
+        headers,
+      };
+    } catch {
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      config = {
+        url: endpoint,
+        headers,
+      };
+    }
+  } else if (token) {
+    config = {
+      url: "https://in.logs.betterstack.com",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    };
   }
-  return logtail;
+
+  return config;
+}
+
+async function sendLog(level, message, meta = {}) {
+  const cfg = getConfig();
+  if (!cfg || !cfg.url) return;
+
+  try {
+    const payload = {
+      dt: new Date().toISOString(),
+      level,
+      message,
+      ...meta,
+    };
+    const res = await fetch(cfg.url, {
+      method: "POST",
+      headers: cfg.headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`[Logtail HTTP Response ${res.status}]: ${text}`);
+    }
+  } catch (err) {
+    console.error(`[Logtail HTTP Error]: ${err.message}`);
+  }
 }
 
 export const logger = {
   info: (message, meta = {}) => {
     console.log(`[INFO] ${message}`, Object.keys(meta).length ? meta : "");
-    const client = getLogtail();
-    if (client) client.info(message, meta);
+    sendLog("info", message, meta);
   },
   warn: (message, meta = {}) => {
     console.warn(`[WARN] ${message}`, Object.keys(meta).length ? meta : "");
-    const client = getLogtail();
-    if (client) client.warn(message, meta);
+    sendLog("warn", message, meta);
   },
   error: (message, meta = {}) => {
     console.error(`[ERROR] ${message}`, Object.keys(meta).length ? meta : "");
-    const client = getLogtail();
-    if (client) client.error(message, meta);
+    sendLog("error", message, meta);
   },
-  flush: async () => {
-    const client = getLogtail();
-    if (client) await client.flush();
-  },
+  flush: async () => {},
 };
 
 export default logger;

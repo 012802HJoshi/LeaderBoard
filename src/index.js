@@ -56,7 +56,7 @@ application.use(errorHandler);
 
 application.listen(port, () => {
   connectDB(mongo_url);
-  logger.info(`[Server]: Running application at http://localhost:${port} Production v0.0.2`);
+  logger.info(`[Server]: Running application at http://localhost:${port} Production v0.0.2 Logger`);
 });
 
 
