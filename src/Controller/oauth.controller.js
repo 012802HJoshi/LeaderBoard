@@ -18,6 +18,7 @@ import {
   renderOAuthResultPage,
 } from "../Utils/oauth_redirect.utils.js";
 import { MERGE_STRATEGIES } from "../Constants/game.constants.js";
+import logger from "../Utils/logger.js";
 
 const VALID_INTENTS = ["login", "link"];
 const VALID_MERGE = Object.values(MERGE_STRATEGIES);
@@ -89,6 +90,7 @@ const startOAuth = (provider) => async (req, res) => {
 
     return res.redirect(authUrl);
   } catch (error) {
+    logger.error(`Start ${provider} OAuth Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: `Failed to start ${provider} OAuth`,
       error: error.message,
@@ -103,7 +105,8 @@ const completeOAuth = (provider) => async (req, res) => {
   try {
     if (!state) throw new Error("Missing state");
     oauthState = decodeOAuthState(state);
-  } catch {
+  } catch (error) {
+    logger.warn(`Complete ${provider} OAuth State Error: ${error.message}`);
     return res
       .status(400)
       .send(
@@ -148,6 +151,7 @@ const completeOAuth = (provider) => async (req, res) => {
     return res.status(result.status).send(renderOAuthResultPage(result));
 
   } catch (error) {
+    logger.error(`Complete ${provider} OAuth Error: ${error.message}`, { stack: error.stack });
     const fail = {
       error: error.code === 11000 ? "SOCIAL_ALREADY_LINKED" : "OAUTH_FAILED",
       message:

@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/012802HJoshi/LeaderBoard#readme",
   "dependencies": {
+    "@logtail/node": "^0.5.8",
     "axios": "^1.13.6",
     "body-parser": "^2.2.2",
     "cookie-parser": "^1.4.7",

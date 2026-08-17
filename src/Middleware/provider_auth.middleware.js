@@ -1,5 +1,6 @@
 import { OAuth2Client } from "google-auth-library";
 import axios from "axios";
+import logger from "../Utils/logger.js";
 
 const google_client_id = process.env.GOOGLE_CLIENT_ID;
 
@@ -61,22 +62,14 @@ export const provider_auth_check = async(req,res,next)=>{
                 picture: fbUser.picture?.data?.url || null,
                 emailVerified: true
             };
-            console.log("Requests" + " " + {
-                provider: "facebook",
-                providerId: fbUser.id,
-                email: fbUser.email || null,
-                name: fbUser.name || null,
-                picture: fbUser.picture?.data?.url || null,
-                emailVerified: true
-            });
         return next();
 } else {
-    console.log('ni hn tere pass auth provider');
-     return res.status(401).json({message:"ni hn tere pass auth provider"});
+    logger.warn("Invalid auth provider attempted", { provider });
+    return res.status(401).json({message:"ni hn tere pass auth provider"});
 }
        
     }catch(err){
-        console.log("Google Auth Error:", err);
+        logger.error(`Provider Auth Error: ${err.message}`, { stack: err.stack, provider });
         return res.status(401).json({message:"Erorr in Middleware"});
     }
 }

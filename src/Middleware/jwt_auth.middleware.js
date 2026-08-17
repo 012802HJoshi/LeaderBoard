@@ -4,6 +4,7 @@ import {
   getSessionType,
 } from "../Services/auth.service.js";
 import Device from "../Model/device.model.js";
+import logger from "../Utils/logger.js";
 
 export const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -25,6 +26,7 @@ export const requireAuth = async (req, res, next) => {
     attachUser(jwt.verify(token, process.env.JWT_SECRET));
   } catch (err) {
     if (err.name !== "TokenExpiredError") {
+      logger.warn(`JWT Auth Failed: ${err.message}`, { path: req.originalUrl });
       return res
         .status(401)
         .json({ message: "Invalid token", code: "TOKEN_INVALID" });

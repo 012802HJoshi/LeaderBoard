@@ -7,6 +7,7 @@ import GameProfile from "../Model/game_profile.model.js";
 import { buildAuthResponse } from "../Services/auth.service.js";
 import { formatProfile } from "../Utils/profile.utils.js";
 import { SESSION_TYPES, MERGE_STRATEGIES } from "../Constants/game.constants.js";
+import logger from "../Utils/logger.js";
 
 const VALID_MERGE = Object.values(MERGE_STRATEGIES);
 
@@ -27,6 +28,7 @@ export const socialLogin = async (req, res) => {
         code: "SOCIAL_ALREADY_LINKED",
       });
     }
+    logger.error(`Social Login Error: ${error.message}`, { stack: error.stack });
     return res.status(error.status || 500).json({
       message: "Social login failed",
       error: error.message,
@@ -57,6 +59,7 @@ export const socialLink = async (req, res) => {
         code: "SOCIAL_ALREADY_LINKED",
       });
     }
+    logger.error(`Social Link Error: ${error.message}`, { stack: error.stack });
     return res.status(error.status || 500).json({
       message: "Failed to link social account",
       error: error.message,
@@ -103,6 +106,7 @@ export const logout = async (req, res) => {
       profile: formatProfile(anonymousProfile),
     });
   } catch (error) {
+    logger.error(`Logout Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Logout failed",
       error: error.message,

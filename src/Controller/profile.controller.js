@@ -11,6 +11,7 @@ import {
   PROFILE_SOURCES,
   SESSION_TYPES,
 } from "../Constants/game.constants.js";
+import logger from "../Utils/logger.js";
 
 export const listProfiles = async (req, res) => {
   try {
@@ -55,6 +56,7 @@ export const listProfiles = async (req, res) => {
       profiles: list,
     });
   } catch (error) {
+    logger.error(`ListProfiles Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to list profiles",
       error: error.message,
@@ -100,6 +102,7 @@ export const switchProfile = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
+    logger.error(`SwitchProfile Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to switch profile",
       error: error.message,
@@ -183,6 +186,7 @@ export const updateProgress = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
+    logger.error(`UpdateProgress Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to update progress",
       error: error.message,
@@ -216,6 +220,7 @@ export const syncPurchase = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
+    logger.error(`SyncPurchase Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to sync purchase",
       error: error.message,
@@ -339,6 +344,7 @@ export const deleteProfile = async (req, res) => {
       profile: formatProfile(anonymousProfile),
     });
   } catch (error) {
+    logger.error(`DeleteProfile Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to delete profile",
       error: error.message,

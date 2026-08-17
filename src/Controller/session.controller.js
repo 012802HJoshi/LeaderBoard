@@ -10,6 +10,8 @@ import {
 import { formatProfile } from "../Utils/profile.utils.js";
 import { SESSION_TYPES } from "../Constants/game.constants.js";
 
+import logger from "../Utils/logger.js";
+
 export const bootstrap = async (req, res) => {
   const { anonymousId } = req.body;
 
@@ -41,6 +43,7 @@ export const bootstrap = async (req, res) => {
       profile: formatProfile(profile)
     });
   } catch (error) {
+    logger.error(`Bootstrap Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to bootstrap session",
       error: error.message,
@@ -72,6 +75,7 @@ export const getSessionMe = async (req, res) => {
         : null,
     });
   } catch (error) {
+    logger.error(`getSessionMe Error: ${error.message}`, { stack: error.stack });
     return res.status(500).json({
       message: "Failed to fetch session",
       error: error.message,

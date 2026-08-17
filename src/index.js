@@ -1,12 +1,24 @@
+import { configDotenv } from "dotenv";
+configDotenv({ path: (process.env.NODE_ENV === "production" ? ".env" : ".env.development") });
+
 import express from "express";
 import cors from "cors";
-import { configDotenv } from "dotenv";
 import client from "prom-client";
-import connectDB from "./Config/connectDB.js";
 import cookieParser from "cookie-parser";
+import connectDB from "./Config/connectDB.js";
 import { gameRouter } from "./Router/game.router.js";
+import logger from "./Utils/logger.js";
+import { errorHandler } from "./Middleware/error.middleware.js";
 
-configDotenv({ path: (process.env.NODE_ENV === "production" ? ".env" : ".env.development") });
+process.on("uncaughtException", (err) => {
+  logger.error(`Uncaught Exception: ${err.message}`, { stack: err.stack });
+});
+
+process.on("unhandledRejection", (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  logger.error(`Unhandled Rejection: ${message}`, { stack });
+});
 
 const port = process.env.PORT;
 const mongo_url = process.env.MONGODB_URL;
@@ -37,10 +49,14 @@ application.get('/metrics', async (req, res) => {
 
 application.get("/", (req, res) => {
   res.send("Game LeaderBoard by ExpressJs Production v0.0.2");
-})
+});
+
+// Central Express Error Handler
+application.use(errorHandler);
 
 application.listen(port, () => {
   connectDB(mongo_url);
-  console.log(`[Server]: Running application at http://localhost:${port}`);
-})
+  logger.info(`[Server]: Running application at http://localhost:${port} Production v0.0.2`);
+});
+
 
