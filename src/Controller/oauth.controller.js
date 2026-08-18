@@ -61,6 +61,7 @@ const parseStartQuery = (req) => {
 const startOAuth = (provider) => async (req, res) => {
   const parsed = parseStartQuery(req);
   if (parsed.error) {
+    logger.error(`Start ${provider} OAuth Error: ${parsed.error}`, { status: parsed.status, path: req.originalUrl, method: req.method });
     return res.status(parsed.status).json({ message: parsed.error });
   }
 
@@ -90,7 +91,7 @@ const startOAuth = (provider) => async (req, res) => {
 
     return res.redirect(authUrl);
   } catch (error) {
-    logger.error(`Start ${provider} OAuth Error: ${error.message}`, { stack: error.stack });
+    logger.error(`Start ${provider} OAuth Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: `Failed to start ${provider} OAuth`,
       error: error.message,
@@ -106,7 +107,7 @@ const completeOAuth = (provider) => async (req, res) => {
     if (!state) throw new Error("Missing state");
     oauthState = decodeOAuthState(state);
   } catch (error) {
-    logger.warn(`Complete ${provider} OAuth State Error: ${error.message}`);
+    logger.error(`Complete ${provider} OAuth State Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res
       .status(400)
       .send(
@@ -120,12 +121,14 @@ const completeOAuth = (provider) => async (req, res) => {
   const { anonymousId, returnUrl, intent, mergeStrategy } = oauthState;
 
   if (oauthError) {
+    logger.error(`Complete ${provider} OAuth Error: Denied by provider`, { oauthError, path: req.originalUrl, method: req.method });
     const fail = { error: "OAUTH_DENIED", message: oauthError };
     if (returnUrl) return res.redirect(buildUnityRedirectUrl(returnUrl, fail));
     return res.status(400).send(renderOAuthResultPage(fail));
   }
 
   if (!code) {
+    logger.error(`Complete ${provider} OAuth Error: Authorization code missing`, { path: req.originalUrl, method: req.method });
     const fail = { error: "NO_CODE", message: "Authorization code missing" };
     if (returnUrl) return res.redirect(buildUnityRedirectUrl(returnUrl, fail));
     return res.status(400).send(renderOAuthResultPage(fail));
@@ -143,7 +146,15 @@ const completeOAuth = (provider) => async (req, res) => {
         ? await handleSocialLink(anonymousId, providerUser, mergeStrategy)
         : await handleSocialLogin(anonymousId, providerUser);
 
-    
+    if (result.status >= 400) {
+      logger.error(`Complete ${provider} OAuth Error [${result.status}]: ${result.body?.message || "Failed"}`, {
+        status: result.status,
+        body: result.body,
+        path: req.originalUrl,
+        method: req.method,
+      });
+    }
+
     if (returnUrl) {
       return res.redirect(buildUnityRedirectUrl(returnUrl, result));
     }
@@ -151,7 +162,7 @@ const completeOAuth = (provider) => async (req, res) => {
     return res.status(result.status).send(renderOAuthResultPage(result));
 
   } catch (error) {
-    logger.error(`Complete ${provider} OAuth Error: ${error.message}`, { stack: error.stack });
+    logger.error(`Complete ${provider} OAuth Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     const fail = {
       error: error.code === 11000 ? "SOCIAL_ALREADY_LINKED" : "OAUTH_FAILED",
       message:

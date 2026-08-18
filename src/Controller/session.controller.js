@@ -16,6 +16,7 @@ export const bootstrap = async (req, res) => {
   const { anonymousId } = req.body;
 
   if (!anonymousId) {
+    logger.error("Bootstrap Error: anonymousId is required", { path: req.originalUrl, method: req.method, ip: req.ip });
     return res.status(400).json({ message: "anonymousId is required" });
   }
 
@@ -25,6 +26,7 @@ export const bootstrap = async (req, res) => {
     const profile = await GameProfile.findById(device.anonymousProfileId);
 
     if (!profile) {
+      logger.error("Bootstrap Error: Profile not found for device", { anonymousId, path: req.originalUrl, method: req.method });
       return res.status(500).json({ message: "Profile not found for device" });
     }
 
@@ -55,6 +57,7 @@ export const getSessionMe = async (req, res) => {
   try {
     const profile = await GameProfile.findById(req.profileId);
     if (!profile) {
+      logger.error("getSessionMe Error: Profile not found", { profileId: req.profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
@@ -87,6 +90,7 @@ export const refreshSession = async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
+    logger.error("refreshSession Error: refreshToken is required", { path: req.originalUrl, method: req.method });
     return res.status(400).json({ message: "refreshToken is required" });
   }
 
@@ -98,11 +102,13 @@ export const refreshSession = async (req, res) => {
 
     const profile = await GameProfile.findById(decoded.profileId);
     if (!profile) {
+      logger.error("refreshSession Error: Profile not found", { profileId: decoded.profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
     const device = await Device.findOne({ anonymousId: decoded.deviceId });
     if (!device) {
+      logger.error("refreshSession Error: Device not found", { deviceId: decoded.deviceId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Device not found" });
     }
 
@@ -116,7 +122,12 @@ export const refreshSession = async (req, res) => {
       sessionType: auth.sessionType,
       profile: formatProfile(profile),
     });
-  } catch {
+  } catch (error) {
+    logger.error(`refreshSession Error: ${error?.message || "Invalid or expired refresh token"}`, {
+      stack: error?.stack,
+      path: req.originalUrl,
+      method: req.method,
+    });
     return res.status(401).json({
       message: "Invalid or expired refresh token",
       code: "REFRESH_EXPIRED",

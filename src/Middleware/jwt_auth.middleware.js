@@ -10,6 +10,11 @@ export const requireAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader?.startsWith("Bearer ")) {
+    logger.error("JWT Auth Error: No token provided", {
+      path: req.originalUrl,
+      method: req.method,
+      ip: req.ip,
+    });
     return res.status(401).json({ message: "No token provided" });
   }
 
@@ -26,16 +31,25 @@ export const requireAuth = async (req, res, next) => {
     attachUser(jwt.verify(token, process.env.JWT_SECRET));
   } catch (err) {
     if (err.name !== "TokenExpiredError") {
-      logger.warn(`JWT Auth Failed: ${err.message}`, { path: req.originalUrl });
+      logger.error(`JWT Auth Error: ${err.message}`, {
+        path: req.originalUrl,
+        method: req.method,
+        ip: req.ip,
+        stack: err.stack,
+      });
       return res
         .status(401)
         .json({ message: "Invalid token", code: "TOKEN_INVALID" });
     }
 
-    // const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
     const refreshToken = req.headers["x-refresh-token"];
 
     if (!refreshToken) {
+      logger.error("JWT Auth Error: Access token expired & no refresh token provided", {
+        path: req.originalUrl,
+        method: req.method,
+        ip: req.ip,
+      });
       return res.status(401).json({
         message: "Session expired, please login again",
         code: "NO_REFRESH_TOKEN",
@@ -53,8 +67,6 @@ export const requireAuth = async (req, res, next) => {
         ? getSessionType(device, decoded.profileId)
         : "anonymous";
 
-        
-
       res.setHeader(
         "x-new-access-token",
         generateAccessToken(decoded.profileId, sessionType, decoded.deviceId)
@@ -64,7 +76,13 @@ export const requireAuth = async (req, res, next) => {
       req.sessionType = sessionType;
       req.deviceId = decoded.deviceId;
       next();
-    } catch {
+    } catch (refreshErr) {
+      logger.error(`JWT Refresh Token Error: ${refreshErr.message}`, {
+        path: req.originalUrl,
+        method: req.method,
+        ip: req.ip,
+        stack: refreshErr.stack,
+      });
       res.clearCookie("refreshToken");
       return res.status(401).json({
         message: "Session expired, please login again",

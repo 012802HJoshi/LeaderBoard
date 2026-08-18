@@ -17,6 +17,7 @@ export const listProfiles = async (req, res) => {
   try {
     const device = await Device.findOne({ anonymousId: req.deviceId });
     if (!device) {
+      logger.error("ListProfiles Error: Device not found", { deviceId: req.deviceId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Device not found" });
     }
 
@@ -56,7 +57,7 @@ export const listProfiles = async (req, res) => {
       profiles: list,
     });
   } catch (error) {
-    logger.error(`ListProfiles Error: ${error.message}`, { stack: error.stack });
+    logger.error(`ListProfiles Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: "Failed to list profiles",
       error: error.message,
@@ -68,12 +69,14 @@ export const switchProfile = async (req, res) => {
   const { profileId } = req.body;
 
   if (!profileId) {
+    logger.error("SwitchProfile Error: profileId is required", { path: req.originalUrl, method: req.method });
     return res.status(400).json({ message: "profileId is required" });
   }
 
   try {
     const device = await Device.findOne({ anonymousId: req.deviceId });
     if (!device) {
+      logger.error("SwitchProfile Error: Device not found", { deviceId: req.deviceId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Device not found" });
     }
 
@@ -81,6 +84,7 @@ export const switchProfile = async (req, res) => {
       (id) => id.toString() === profileId
     );
     if (!isKnown) {
+      logger.error("SwitchProfile Error: Profile not available on this device", { profileId, deviceId: req.deviceId, path: req.originalUrl, method: req.method });
       return res.status(403).json({
         message: "Profile not available on this device",
         code: "PROFILE_NOT_ON_DEVICE",
@@ -89,6 +93,7 @@ export const switchProfile = async (req, res) => {
 
     const profile = await GameProfile.findById(profileId);
     if (!profile) {
+      logger.error("SwitchProfile Error: Profile not found", { profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
@@ -102,7 +107,7 @@ export const switchProfile = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
-    logger.error(`SwitchProfile Error: ${error.message}`, { stack: error.stack });
+    logger.error(`SwitchProfile Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: "Failed to switch profile",
       error: error.message,
@@ -124,6 +129,7 @@ export const updateProgress = async (req, res) => {
   try {
     const profile = await GameProfile.findById(req.profileId);
     if (!profile) {
+      logger.error("UpdateProgress Error: Profile not found", { profileId: req.profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
@@ -131,6 +137,13 @@ export const updateProgress = async (req, res) => {
       profileVersion !== undefined &&
       profileVersion !== profile.profileVersion
     ) {
+      logger.error("UpdateProgress Error: Stale profile version", {
+        providedVersion: profileVersion,
+        currentVersion: profile.profileVersion,
+        profileId: req.profileId,
+        path: req.originalUrl,
+        method: req.method,
+      });
       return res.status(409).json({
         message: "Profile was updated elsewhere",
         code: "STALE_PROFILE",
@@ -186,7 +199,7 @@ export const updateProgress = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
-    logger.error(`UpdateProgress Error: ${error.message}`, { stack: error.stack });
+    logger.error(`UpdateProgress Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: "Failed to update progress",
       error: error.message,
@@ -198,6 +211,7 @@ export const syncPurchase = async (req, res) => {
   const { productId, platform, receiptToken } = req.body;
 
   if (!productId || !platform) {
+    logger.error("SyncPurchase Error: productId and platform are required", { productId, platform, path: req.originalUrl, method: req.method });
     return res.status(400).json({
       message: "productId and platform are required",
     });
@@ -206,6 +220,7 @@ export const syncPurchase = async (req, res) => {
   try {
     const profile = await GameProfile.findById(req.profileId);
     if (!profile) {
+      logger.error("SyncPurchase Error: Profile not found", { profileId: req.profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
@@ -220,7 +235,7 @@ export const syncPurchase = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
-    logger.error(`SyncPurchase Error: ${error.message}`, { stack: error.stack });
+    logger.error(`SyncPurchase Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: "Failed to sync purchase",
       error: error.message,
@@ -235,6 +250,7 @@ export const deleteProfile = async (req, res) => {
   try {
     const device = await Device.findOne({ anonymousId: deviceId });
     if (!device) {
+      logger.error("DeleteProfile Error: Device not found", { deviceId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Device not found" });
     }
 
@@ -242,6 +258,7 @@ export const deleteProfile = async (req, res) => {
       (id) => id.toString() === profileId.toString()
     );
     if (!isKnown) {
+      logger.error("DeleteProfile Error: Profile not available on this device", { profileId, deviceId, path: req.originalUrl, method: req.method });
       return res.status(403).json({
         message: "Profile not available on this device",
         code: "PROFILE_NOT_ON_DEVICE",
@@ -252,6 +269,7 @@ export const deleteProfile = async (req, res) => {
       device.anonymousProfileId
     );
     if (!anonymousProfile) {
+      logger.error("DeleteProfile Error: Anonymous profile not found", { profileId: device.anonymousProfileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Anonymous profile not found" });
     }
 
@@ -259,6 +277,7 @@ export const deleteProfile = async (req, res) => {
       device.anonymousProfileId.toString() === profileId.toString();
     if (deletingAnonymous) {
       if (nextLevel === undefined) {
+        logger.error("DeleteProfile Error: levelsPlayed is required when resetting anonymous profile", { path: req.originalUrl, method: req.method });
         return res.status(400).json({
           message: "levelsPlayed is required",
         });
@@ -266,6 +285,7 @@ export const deleteProfile = async (req, res) => {
 
       const parsedLevel = normalizeNumber(nextLevel, null);
       if (parsedLevel === null || parsedLevel < 0) {
+        logger.error("DeleteProfile Error: levelsPlayed must be a non-negative number", { nextLevel, path: req.originalUrl, method: req.method });
         return res.status(400).json({
           message: "levelsPlayed must be a non-negative number",
         });
@@ -296,10 +316,12 @@ export const deleteProfile = async (req, res) => {
 
     const deletedProfile = await GameProfile.findById(profileId);
     if (!deletedProfile) {
+      logger.error("DeleteProfile Error: Profile not found", { profileId, path: req.originalUrl, method: req.method });
       return res.status(404).json({ message: "Profile not found" });
     }
 
     if (deletedProfile.source === PROFILE_SOURCES.ANONYMOUS) {
+      logger.error("DeleteProfile Error: Cannot delete anonymous profile via social deletion endpoint", { profileId, path: req.originalUrl, method: req.method });
       return res.status(400).json({
         message: "Only social profiles can be deleted with this endpoint",
         code: "PROFILE_NOT_SOCIAL",
@@ -309,6 +331,7 @@ export const deleteProfile = async (req, res) => {
     if (nextLevel !== undefined) {
       const parsedLevel = normalizeNumber(nextLevel, null);
       if (parsedLevel === null || parsedLevel < 0) {
+        logger.error("DeleteProfile Error: levelsPlayed must be a non-negative number", { nextLevel, path: req.originalUrl, method: req.method });
         return res.status(400).json({
           message: "levelsPlayed must be a non-negative number",
         });
@@ -344,7 +367,7 @@ export const deleteProfile = async (req, res) => {
       profile: formatProfile(anonymousProfile),
     });
   } catch (error) {
-    logger.error(`DeleteProfile Error: ${error.message}`, { stack: error.stack });
+    logger.error(`DeleteProfile Error: ${error.message}`, { stack: error.stack, path: req.originalUrl, method: req.method });
     return res.status(500).json({
       message: "Failed to delete profile",
       error: error.message,
