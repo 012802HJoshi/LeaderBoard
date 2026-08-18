@@ -19,6 +19,8 @@ export const requireAuth = async (req, res, next) => {
   }
 
   const token = authHeader.split(" ")[1];
+  const decodedAccess = jwt.decode(token);
+  const profileIdFromAccess = decodedAccess?.profileId || null;
 
   const attachUser = (decoded) => {
     req.profileId = decoded.profileId;
@@ -32,6 +34,7 @@ export const requireAuth = async (req, res, next) => {
   } catch (err) {
     if (err.name !== "TokenExpiredError") {
       logger.error(`JWT Auth Error: ${err.message}`, {
+        profileId: profileIdFromAccess,
         path: req.originalUrl,
         method: req.method,
         ip: req.ip,
@@ -42,10 +45,11 @@ export const requireAuth = async (req, res, next) => {
         .json({ message: "Invalid token", code: "TOKEN_INVALID" });
     }
 
-    const refreshToken = req.headers["x-refresh-token"];
+    let refreshToken = req.headers["x-refresh-token"];
 
     if (!refreshToken) {
       logger.error("JWT Auth Error: Access token expired & no refresh token provided", {
+        profileId: profileIdFromAccess,
         path: req.originalUrl,
         method: req.method,
         ip: req.ip,
@@ -54,6 +58,10 @@ export const requireAuth = async (req, res, next) => {
         message: "Session expired, please login again",
         code: "NO_REFRESH_TOKEN",
       });
+    }
+
+    if (refreshToken.startsWith("Bearer ")) {
+      refreshToken = refreshToken.split(" ")[1];
     }
 
     try {
@@ -77,7 +85,11 @@ export const requireAuth = async (req, res, next) => {
       req.deviceId = decoded.deviceId;
       next();
     } catch (refreshErr) {
+      const decodedRefresh = jwt.decode(refreshToken);
+      const profileId = decodedRefresh?.profileId || profileIdFromAccess || null;
+
       logger.error(`JWT Refresh Token Error: ${refreshErr.message}`, {
+        profileId,
         path: req.originalUrl,
         method: req.method,
         ip: req.ip,

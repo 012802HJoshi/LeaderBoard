@@ -123,7 +123,9 @@ export const refreshSession = async (req, res) => {
       profile: formatProfile(profile),
     });
   } catch (error) {
+    const decodedRefresh = jwt.decode(refreshToken);
     logger.error(`refreshSession Error: ${error?.message || "Invalid or expired refresh token"}`, {
+      profileId: decodedRefresh?.profileId || null,
       stack: error?.stack,
       path: req.originalUrl,
       method: req.method,
