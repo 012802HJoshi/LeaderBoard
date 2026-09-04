@@ -4,6 +4,9 @@ const winnerEntrySchema = new mongoose.Schema(
   {
     rank: { type: Number, required: true },
     profileId: { type: mongoose.Schema.Types.ObjectId, ref: "GameProfile", required: true },
+    username: { type: String, default: null, trim: true },
+    levelsPlayed: { type: Number, default: 1, min: 1 },
+    profileData: { type: String, default: null, trim: true },
     score: { type: Number, required: true },
   },
   { _id: false }

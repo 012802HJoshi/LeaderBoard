@@ -10,8 +10,6 @@ import {
     setCachedMonthlyTop50,
     incrementMonthlyScore,
     clearMonthlyLeaderboardData,
-    getPreviousMonthTop50,
-    setPreviousMonthTop50,
     getMonthlyEndTime,
 } from "../Services/monthly_leaderboard.service.js";
 
@@ -230,7 +228,7 @@ export const submitMonthlyScore = async (req, res) => {
 
 /**
  * GET /monthly/winners
- * Fetch all monthly winners (top 3 for each month), populated with profileData and username.
+ * Fetch all monthly winners (top 5 for each month), populated with profileData, username, and levelsPlayed.
  * Supports optional ?month=YYYY-MM filter.
  */
 export const getMonthlyWinners = async (req, res) => {
@@ -241,7 +239,7 @@ export const getMonthlyWinners = async (req, res) => {
         const monthlyWinnersDocs = await MonthlyWinner.find(query)
             .populate({
                 path: "winners.profileId",
-                select: "username profileData",
+                select: "username profileData levelsPlayed",
             })
             .sort({ month: -1 });
 
@@ -250,13 +248,14 @@ export const getMonthlyWinners = async (req, res) => {
             return {
                 _id: docObj._id,
                 month: docObj.month,
-                winners: (docObj.winners || []).slice(0, 3).map((w) => {
+                winners: (docObj.winners || []).slice(0, 5).map((w) => {
                     const profile = w.profileId && typeof w.profileId === "object" ? w.profileId : null;
                     return {
                         rank: w.rank,
                         profileId: profile ? profile._id : w.profileId,
-                        username: profile?.username || "Anonymous",
-                        profileData: profile?.profileData || null,
+                        username: w.username || profile?.username || "Anonymous",
+                        levelsPlayed: w.levelsPlayed ?? profile?.levelsPlayed ?? 1,
+                        profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
                         score: w.score,
                     };
                 }),
@@ -276,18 +275,49 @@ export const getMonthlyWinners = async (req, res) => {
 };
 
 /**
- * GET /monthly/leaderboard/previous
- * Public endpoint returning previous month's top 50 players stored in Redis.
+ * GET /monthly/winners/latest?count=5
+ * Fetch top winners (default top 5) from the most recent monthly winner entry in MongoDB.
  */
-export const getPreviousMonthlyLeaderboardTop = async (req, res) => {
+export const getLatestMonthlyWinners = async (req, res) => {
     try {
-        const previousTop = await getPreviousMonthTop50();
+        const count = Math.min(Math.max(parseInt(req.query.count || req.query.limit) || 5, 1), 50);
+
+        const latestDoc = await MonthlyWinner.findOne()
+            .populate({
+                path: "winners.profileId",
+                select: "username profileData levelsPlayed",
+            })
+            .sort({ month: -1, _id: -1 });
+
+        if (!latestDoc) {
+            return res.status(404).json({
+                message: "No monthly winners found",
+                month: null,
+                winners: [],
+            });
+        }
+
+        const docObj = latestDoc.toObject ? latestDoc.toObject() : latestDoc;
+        const winners = (docObj.winners || []).slice(0, count).map((w) => {
+            const profile = w.profileId && typeof w.profileId === "object" ? w.profileId : null;
+            return {
+                rank: w.rank,
+                profileId: profile ? profile._id : w.profileId,
+                username: w.username || profile?.username || "Anonymous",
+                levelsPlayed: w.levelsPlayed ?? profile?.levelsPlayed ?? 1,
+                profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
+                score: w.score,
+            };
+        });
+
         return res.status(200).json({
-            previousTop: previousTop || [],
+            month: docObj.month,
+            count: winners.length,
+            winners,
         });
     } catch (error) {
         return res.status(500).json({
-            message: "Failed to fetch previous month's leaderboard",
+            message: "Failed to fetch latest monthly winners",
             error: error.message,
         });
     }
@@ -296,29 +326,35 @@ export const getPreviousMonthlyLeaderboardTop = async (req, res) => {
 /**
  * DELETE /monthly/leaderboard/clear
  * Clear all monthly leaderboard data from Redis sorted set and top 50 cache.
- * Stores current top 50 as JSON in Redis (replacing previous month's data)
- * and archives top 3 players to MonthlyWinner MongoDB collection before clearing.
+ * Archives top 5 players to MonthlyWinner MongoDB collection before clearing.
  */
 export const clearMonthlyLeaderboard = async (req, res) => {
     try {
         const top50Players = await getMonthlyTopPlayers(50);
         if (top50Players && top50Players.length > 0) {
-            // Enrich top 50 with username & profileData and store in Redis as JSON (replacing old previous month top 50)
-            const enrichedTop50 = await enrichEntries(top50Players);
-            await setPreviousMonthTop50(enrichedTop50);
-
-            // Archive top 3 in MonthlyWinner MongoDB model
+            // Archive top 5 in MonthlyWinner MongoDB model
             const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-08"
-            const validWinners = top50Players
+            const top5Players = top50Players
                 .filter((p) => mongoose.Types.ObjectId.isValid(p.profileId))
-                .slice(0, 3)
-                .map((p) => ({
-                    rank: p.rank,
-                    profileId: p.profileId,
-                    score: p.score,
-                }));
+                .slice(0, 5);
 
-            if (validWinners.length > 0) {
+            if (top5Players.length > 0) {
+                const profileIds = top5Players.map((p) => p.profileId);
+                const profiles = await GameProfile.find({ _id: { $in: profileIds } });
+                const profileMap = new Map(profiles.map((p) => [p._id.toString(), p]));
+
+                const validWinners = top5Players.map((p) => {
+                    const profile = profileMap.get(p.profileId);
+                    return {
+                        rank: p.rank,
+                        profileId: p.profileId,
+                        username: profile?.username || "Anonymous",
+                        levelsPlayed: profile?.levelsPlayed ?? 1,
+                        profileData: profile?.profileData || null,
+                        score: p.score,
+                    };
+                });
+
                 await MonthlyWinner.create({
                     month: currentMonth,
                     winners: validWinners,
@@ -329,7 +365,7 @@ export const clearMonthlyLeaderboard = async (req, res) => {
         await clearMonthlyLeaderboardData();
 
         return res.status(200).json({
-            message: "Monthly leaderboard cleared, previous month top 50 stored in Redis, and winners archived successfully",
+            message: "Monthly leaderboard cleared and top 5 winners archived successfully",
         });
     } catch (error) {
         return res.status(500).json({
