@@ -31,8 +31,8 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             rank: entry.rank,
             profileId: entry.profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed: entry.levelsPlayed,
-            profileData: profile?.profileData || null,
+            levelsPlayed: Math.max(20, entry.levelsPlayed || 20),
+            profileData: profile?.profileData || "{}",
         };
 
         return result;
@@ -186,8 +186,8 @@ export const getMyRank = async (req, res) => {
             rank,
             profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed,
-            profileData: profile?.profileData || null,
+            levelsPlayed: Math.max(20, levelsPlayed || 20),
+            profileData: profile?.profileData || "{}",
         };
 
         return res.status(200).json({

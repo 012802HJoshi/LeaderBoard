@@ -35,9 +35,9 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             rank: entry.rank,
             profileId: entry.profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed: profile?.levelsPlayed ?? 1,
+            levelsPlayed: Math.max(20, profile?.levelsPlayed ?? 20),
             value: entry.score,
-            profileData: profile?.profileData || null,
+            profileData: profile?.profileData || "{}",
         };
     });
 };
@@ -166,9 +166,9 @@ export const getMyMonthlyRank = async (req, res) => {
             rank,
             profileId,
             username: profile?.username || "Anonymous",
-            levelsPlayed: profile?.levelsPlayed ?? 1,
+            levelsPlayed: Math.max(20, profile?.levelsPlayed ?? 20),
             value: score,
-            profileData: profile?.profileData || null,
+            profileData: profile?.profileData || "{}",
         };
 
         return res.status(200).json({

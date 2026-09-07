@@ -35,8 +35,8 @@ async function seedLeaderboard() {
 
     const profilesToCreate = [];
     for (let i = 1; i <= count; i++) {
-      // Generate levels between 10 and 1000
-      const levelsPlayed = Math.floor(Math.random() * 990) + 10;
+      // Generate levels between 20 and 1000
+      const levelsPlayed = Math.floor(Math.random() * 981) + 20;
       profilesToCreate.push({
         username: `Player_${String(i).padStart(3, '0')}`,
         levelsPlayed,
