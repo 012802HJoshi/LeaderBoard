@@ -47,7 +47,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
  */
 const getMonthlyTop50 = async () => {
     const cached = await getCachedMonthlyTop50();
-    if (cached && (cached.length === 0 || (cached[0].value !== undefined && cached[0].levelsPlayed !== undefined))) return cached;
+    if (cached && cached.length > 0 && cached[0].value !== undefined && cached[0].levelsPlayed !== undefined) return cached;
 
     const topPlayers = await getMonthlyTopPlayers(50);
     const enriched = await enrichEntries(topPlayers);
