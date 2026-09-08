@@ -38,6 +38,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
             levelsPlayed: Math.max(20, profile?.levelsPlayed ?? 20),
             score: entry.score,
             profileData: profile?.profileData || "{}",
+            createdAt: profile?.createdAt || null,
         };
     });
 };
@@ -47,7 +48,7 @@ const enrichEntries = async (entries, currentProfileId = null) => {
  */
 const getMonthlyTop50 = async () => {
     const cached = await getCachedMonthlyTop50();
-    if (cached && cached.length > 0 && cached[0].score !== undefined && cached[0].levelsPlayed !== undefined) return cached;
+    if (cached && cached.length > 0 && cached[0].score !== undefined && cached[0].levelsPlayed !== undefined && cached[0].createdAt !== undefined) return cached;
 
     const topPlayers = await getMonthlyTopPlayers(50);
     const enriched = await enrichEntries(topPlayers);
@@ -169,6 +170,7 @@ export const getMyMonthlyRank = async (req, res) => {
             levelsPlayed: Math.max(20, profile?.levelsPlayed ?? 20),
             score,
             profileData: profile?.profileData || "{}",
+            createdAt: profile?.createdAt || null,
         };
 
         return res.status(200).json({
@@ -241,7 +243,7 @@ export const getMonthlyWinners = async (req, res) => {
         const monthlyWinnersDocs = await MonthlyWinner.find(query)
             .populate({
                 path: "winners.profileId",
-                select: "username profileData levelsPlayed",
+                select: "username profileData levelsPlayed createdAt",
             })
             .sort({ month: -1 });
 
@@ -259,6 +261,7 @@ export const getMonthlyWinners = async (req, res) => {
                         levelsPlayed: w.levelsPlayed ?? profile?.levelsPlayed ?? 1,
                         profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
                         score: w.score,
+                        createdAt: w.createdAt || profile?.createdAt || null,
                     };
                 }),
             };
@@ -287,7 +290,7 @@ export const getLatestMonthlyWinners = async (req, res) => {
         const latestDoc = await MonthlyWinner.findOne()
             .populate({
                 path: "winners.profileId",
-                select: "username profileData levelsPlayed",
+                select: "username profileData levelsPlayed createdAt",
             })
             .sort({ month: -1, _id: -1 });
 
@@ -309,6 +312,7 @@ export const getLatestMonthlyWinners = async (req, res) => {
                 levelsPlayed: w.levelsPlayed ?? profile?.levelsPlayed ?? 1,
                 profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
                 score: w.score,
+                createdAt: w.createdAt || profile?.createdAt || null,
             };
         });
 
@@ -354,6 +358,7 @@ export const clearMonthlyLeaderboard = async (req, res) => {
                         levelsPlayed: profile?.levelsPlayed ?? 1,
                         profileData: profile?.profileData || null,
                         score: p.score,
+                        createdAt: profile?.createdAt || null,
                     };
                 });
 
