@@ -93,7 +93,11 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
             if (rank !== null && rank > 45) {
                 const neighbors = await getMonthlyPlayerNeighbors(profileId, range);
                 if (neighbors.length > 0) {
-                    response.aroundMe = await enrichEntries(neighbors, profileId);
+                    const enriched = await enrichEntries(neighbors, profileId);
+                    // Filter out any entries already present in topList to prevent overlapping/collapsing
+                    const maxTopRank = topList.length;
+                    const nonOverlapping = enriched.filter((entry) => entry.rank > maxTopRank);
+                    response.aroundMe = nonOverlapping.length > 0 ? nonOverlapping : null;
                 }
             }
         }
@@ -262,6 +266,7 @@ export const getMonthlyWinners = async (req, res) => {
                         profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
                         score: w.score,
                         createdAt: w.createdAt || profile?.createdAt || null,
+                        claimed: w.claimed ?? false,
                     };
                 }),
             };
@@ -313,6 +318,7 @@ export const getLatestMonthlyWinners = async (req, res) => {
                 profileData: w.profileData !== undefined ? w.profileData : (profile?.profileData || null),
                 score: w.score,
                 createdAt: w.createdAt || profile?.createdAt || null,
+                claimed: w.claimed ?? false,
             };
         });
 
@@ -359,6 +365,7 @@ export const clearMonthlyLeaderboard = async (req, res) => {
                         profileData: profile?.profileData || null,
                         score: p.score,
                         createdAt: profile?.createdAt || null,
+                        claimed: false,
                     };
                 });
 
@@ -377,6 +384,73 @@ export const clearMonthlyLeaderboard = async (req, res) => {
     } catch (error) {
         return res.status(500).json({
             message: "Failed to clear monthly leaderboard",
+            error: error.message,
+        });
+    }
+};
+
+/**
+ * PATCH /monthly/winners/claim
+ * Update claim status for a specific user's monthly winner entry.
+ * Body/Params/Auth: { profileId, month (optional), claimed (optional boolean, default true) }
+ */
+export const updateMonthlyWinnerClaim = async (req, res) => {
+    try {
+        const body = req.body || {};
+        const profileId = body.profileId || req.params.profileId || req.profileId;
+        const month = body.month || req.query.month;
+        const claimed = body.claimed !== undefined ? Boolean(body.claimed) : true;
+
+        if (!profileId) {
+            return res.status(400).json({
+                message: "profileId is required",
+            });
+        }
+
+        const query = month ? { month } : {};
+        const monthlyWinnerDoc = await MonthlyWinner.findOne({
+            ...query,
+            "winners.profileId": profileId,
+        }).sort({ month: -1 });
+
+        if (!monthlyWinnerDoc) {
+            return res.status(404).json({
+                message: "Monthly winner record not found for specified user",
+            });
+        }
+
+        const winnerEntry = monthlyWinnerDoc.winners.find(
+            (w) => w.profileId.toString() === profileId.toString()
+        );
+
+        if (!winnerEntry) {
+            return res.status(404).json({
+                message: "Winner entry not found",
+            });
+        }
+
+        winnerEntry.claimed = claimed;
+        await monthlyWinnerDoc.save();
+
+        return res.status(200).json({
+            message: "Claim status updated successfully",
+            month: monthlyWinnerDoc.month,
+            profileId,
+            claimed: winnerEntry.claimed,
+            winner: {
+                rank: winnerEntry.rank,
+                profileId: winnerEntry.profileId,
+                username: winnerEntry.username,
+                levelsPlayed: winnerEntry.levelsPlayed,
+                profileData: winnerEntry.profileData,
+                score: winnerEntry.score,
+                createdAt: winnerEntry.createdAt,
+                claimed: winnerEntry.claimed,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to update monthly winner claim status",
             error: error.message,
         });
     }

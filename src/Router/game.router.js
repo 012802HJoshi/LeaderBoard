@@ -28,6 +28,7 @@ import {
   clearMonthlyLeaderboard,
   getMonthlyWinners,
   getLatestMonthlyWinners,
+  updateMonthlyWinnerClaim,
 } from "../Controller/monthly_leaderboard.controller.js";
 import { requireAuth } from "../Middleware/jwt_auth.middleware.js";
 import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
@@ -69,6 +70,11 @@ gameRouter.post("/monthly/leaderboard/score", requireAuth, submitMonthlyScore); 
 
 // Auth: clear monthly leaderboard data
 gameRouter.delete("/monthly/leaderboard/clear", clearMonthlyLeaderboard);
+
+// Claim monthly winner reward: update claimed boolean for a specific user
+gameRouter.patch("/monthly/winners/claim", updateMonthlyWinnerClaim);
+gameRouter.patch("/monthly/winners/claim/:profileId", updateMonthlyWinnerClaim);
+gameRouter.patch("/monthly/leaderboard/winners/claim", updateMonthlyWinnerClaim);
 
 // Public alias: get latest monthly winners (top 5 of the most recent month)
 gameRouter.get("/monthly/winners/latest", getLatestMonthlyWinners);

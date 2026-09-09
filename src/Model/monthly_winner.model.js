@@ -9,6 +9,7 @@ const winnerEntrySchema = new mongoose.Schema(
     profileData: { type: String, default: null, trim: true },
     score: { type: Number, required: true },
     createdAt: { type: Date, default: null },
+    claimed: { type: Boolean, default: false },
   },
   { _id: false }
 );

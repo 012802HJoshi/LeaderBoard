@@ -112,11 +112,15 @@ export const getFullLeaderboard = async (req, res) => {
                 }
             }
 
-            // Only fetch aroundMe if rank is > 45 (players in top 45 are already in the top list)
+            // Only fetch aroundMe if player rank is > 45
             if (rank !== null && rank > 45) {
                 const neighbors = await getPlayerNeighbors(profileId, range);
                 if (neighbors.length > 0) {
-                    response.aroundMe = await enrichEntries(neighbors, profileId);
+                    const enriched = await enrichEntries(neighbors, profileId);
+                    // Filter out any entries already present in topList to prevent overlapping/collapsing
+                    const maxTopRank = topList.length;
+                    const nonOverlapping = enriched.filter((entry) => entry.rank > maxTopRank);
+                    response.aroundMe = nonOverlapping.length > 0 ? nonOverlapping : null;
                 }
             }
         }
