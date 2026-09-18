@@ -4,6 +4,7 @@ configDotenv({ path: (process.env.NODE_ENV === "production" ? ".env" : ".env.dev
 import express from "express";
 import cors from "cors";
 import client from "prom-client";
+import connectRedis from "./Config/connectRedis.js";
 import cookieParser from "cookie-parser";
 import connectDB from "./Config/connectDB.js";
 import { gameRouter } from "./Router/game.router.js";
@@ -22,6 +23,7 @@ process.on("unhandledRejection", (reason) => {
 
 const port = process.env.PORT;
 const mongo_url = process.env.MONGODB_URL;
+const redis_url = process.env.REDIS_URL || "redis://localhost:6379";
 
 client.collectDefaultMetrics({ prefix: 'nodejs_' });
 
@@ -54,9 +56,18 @@ application.get("/", (req, res) => {
 // Central Express Error Handler
 application.use(errorHandler);
 
-application.listen(port, () => {
-  connectDB(mongo_url);
-  logger.info(`[Server]: Running application at http://localhost:${port} Production v0.0.2 Logger`);
-});
+async function startServer() {
+  try {
+    await connectDB(mongo_url);
+    await connectRedis(redis_url);
 
+    application.listen(port, () => {
+      logger.info(`[Server]: Running application at http://localhost:${port} Production v0.0.2 Logger`);
+    });
+  } catch (error) {
+    logger.error('[Server]: Failed to start server:', error);
+    process.exit(1);
+  }
+}
 
+startServer();

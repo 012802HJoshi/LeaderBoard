@@ -4,31 +4,46 @@ on:
   push:
     branches:
       - main
+      - staging
+      - dev
   workflow_dispatch:
 
 jobs:
   deploy:
+    name: Deploy to ${{ github.ref_name == 'main' && 'Production VM' || 'Staging VM' }}
     runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Resolve Environment & Target VM Secrets
+        id: vars
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TARGET_ENV=production" >> $GITHUB_OUTPUT
+            echo "Targeting Production VM"
+          else
+            echo "TARGET_ENV=staging" >> $GITHUB_OUTPUT
+            echo "Targeting Staging VM"
+          fi
+
       - name: Verify required secrets are set
         env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ secrets.VM_USER }}
-          VM_SSH_PRIVATE_KEY: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          VM_APP_DIR: ${{ secrets.VM_APP_DIR }}
-          ENV_FILE: ${{ secrets.ENV_FILE }}
-          VM_PORT: ${{ secrets.VM_PORT }}
+          VM_HOST: ${{ github.ref_name == 'main' && (secrets.PROD_VM_HOST || secrets.VM_HOST) || (secrets.STAGING_VM_HOST || secrets.VM_HOST) }}
+          VM_USER: ${{ github.ref_name == 'main' && (secrets.PROD_VM_USER || secrets.VM_USER) || (secrets.STAGING_VM_USER || secrets.VM_USER) }}
+          VM_SSH_PRIVATE_KEY: ${{ github.ref_name == 'main' && (secrets.PROD_VM_SSH_PRIVATE_KEY || secrets.VM_SSH_PRIVATE_KEY) || (secrets.STAGING_VM_SSH_PRIVATE_KEY || secrets.VM_SSH_PRIVATE_KEY) }}
+          VM_APP_DIR: ${{ github.ref_name == 'main' && (secrets.PROD_VM_APP_DIR || secrets.VM_APP_DIR) || (secrets.STAGING_VM_APP_DIR || secrets.VM_APP_DIR) }}
+          ENV_FILE: ${{ github.ref_name == 'main' && (secrets.PROD_ENV_FILE || secrets.ENV_FILE) || (secrets.STAGING_ENV_FILE || secrets.ENV_FILE) }}
+          VM_PORT: ${{ github.ref_name == 'main' && (secrets.PROD_VM_PORT || secrets.VM_PORT) || (secrets.STAGING_VM_PORT || secrets.VM_PORT) }}
         run: |
           missing=0
           check() {
             name="$1"
             val="$2"
             if [ -z "$val" ]; then
-              echo "::error::Secret $name is missing or empty. Add it under Settings → Secrets and variables → Actions."
+              echo "::error::Secret $name is missing or empty for branch '${{ github.ref_name }}'."
               missing=1
             else
               echo "OK: $name is set (value hidden)"
@@ -39,12 +54,12 @@ jobs:
           check VM_SSH_PRIVATE_KEY "$VM_SSH_PRIVATE_KEY"
           check VM_APP_DIR "$VM_APP_DIR"
           if [ -z "$ENV_FILE" ]; then
-            echo "::warning::ENV_FILE is empty — CI will not write .env (use a secret or manage .env on the VM)"
+            echo "::warning::ENV_FILE is empty — CI will not write .env file"
           else
             echo "OK: ENV_FILE is set (value hidden)"
           fi
           if [ -z "$VM_PORT" ]; then
-            echo "OK: VM_PORT not set — deploy will use default port 22"
+            echo "OK: VM_PORT not set — default SSH port 22 will be used"
           else
             echo "OK: VM_PORT is set (value hidden)"
           fi
@@ -55,19 +70,19 @@ jobs:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
-          APP_DIR: ${{ secrets.VM_APP_DIR }}
+          APP_DIR: ${{ github.ref_name == 'main' && (secrets.PROD_VM_APP_DIR || secrets.VM_APP_DIR) || (secrets.STAGING_VM_APP_DIR || secrets.VM_APP_DIR) }}
           BRANCH: ${{ github.ref_name }}
-          ENV_FILE: ${{ secrets.ENV_FILE }}
+          ENV_FILE: ${{ github.ref_name == 'main' && (secrets.PROD_ENV_FILE || secrets.ENV_FILE) || (secrets.STAGING_ENV_FILE || secrets.ENV_FILE) }}
         with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.VM_SSH_PASSPHRASE }}
-          port: ${{ secrets.VM_PORT || 22 }}
+          host: ${{ github.ref_name == 'main' && (secrets.PROD_VM_HOST || secrets.VM_HOST) || (secrets.STAGING_VM_HOST || secrets.VM_HOST) }}
+          username: ${{ github.ref_name == 'main' && (secrets.PROD_VM_USER || secrets.VM_USER) || (secrets.STAGING_VM_USER || secrets.VM_USER) }}
+          key: ${{ github.ref_name == 'main' && (secrets.PROD_VM_SSH_PRIVATE_KEY || secrets.VM_SSH_PRIVATE_KEY) || (secrets.STAGING_VM_SSH_PRIVATE_KEY || secrets.VM_SSH_PRIVATE_KEY) }}
+          passphrase: ${{ github.ref_name == 'main' && (secrets.PROD_VM_SSH_PASSPHRASE || secrets.VM_SSH_PASSPHRASE) || (secrets.STAGING_VM_SSH_PASSPHRASE || secrets.VM_SSH_PASSPHRASE) }}
+          port: ${{ github.ref_name == 'main' && (secrets.PROD_VM_PORT || secrets.VM_PORT || 22) || (secrets.STAGING_VM_PORT || secrets.VM_PORT || 22) }}
           script_stop: true
           envs: APP_DIR,BRANCH,ENV_FILE
           script: |
-            # Load environment and Node Version Manager (NVM) if available
+            # Load NVM environment if available
             export NVM_DIR="$HOME/.nvm"
             if [ -s "$NVM_DIR/nvm.sh" ]; then
               set +e
@@ -86,7 +101,7 @@ jobs:
             fi
 
             cd "$APP_DIR"
-            echo "Deploying as user: $(whoami)"
+            echo "Deploying branch $BRANCH as user: $(whoami)"
             node -v
             npm -v
             git fetch origin
@@ -100,8 +115,11 @@ jobs:
             fi
 
             if command -v pm2 >/dev/null 2>&1; then
-              pm2 describe auth >/dev/null 2>&1 && pm2 restart auth --update-env || pm2 start npm --name auth -- run start:prod
+              pm2 describe leaderboard >/dev/null 2>&1 && pm2 restart leaderboard --update-env || pm2 start npm --name leaderboard -- run start:prod
               pm2 save || true
+            elif command -v docker >/dev/null 2>&1 && [ -f "docker-compose.yml" ]; then
+              docker compose down || true
+              docker compose up -d --build
             else
               pkill -f "node src/index.js" || true
               nohup npm run start:prod > app.log 2>&1 </dev/null &

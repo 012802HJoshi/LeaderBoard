@@ -14,6 +14,22 @@ import {
   syncPurchase,
   deleteProfile
 } from "../Controller/profile.controller.js";
+import {
+  getFullLeaderboard,
+  getLeaderboard,
+  getMyRank,
+  submitScore,
+} from "../Controller/leaderboard.controller.js";
+import {
+  getFullMonthlyLeaderboard,
+  getMonthlyLeaderboardTop,
+  getMyMonthlyRank,
+  submitMonthlyScore,
+  clearMonthlyLeaderboard,
+  getMonthlyWinners,
+  getLatestMonthlyWinners,
+  updateMonthlyWinnerClaim,
+} from "../Controller/monthly_leaderboard.controller.js";
 import { requireAuth } from "../Middleware/jwt_auth.middleware.js";
 import { provider_auth_check } from "../Middleware/provider_auth.middleware.js";
 
@@ -38,3 +54,32 @@ gameRouter.patch("/progress", requireAuth, updateProgress); // Started // Tested
 gameRouter.post("/purchase/sync", requireAuth, syncPurchase);
 
 gameRouter.delete("/delete/profile", requireAuth, deleteProfile);
+
+// ──Global Leaderboard ──
+gameRouter.get("/global/leaderboard", requireAuth, getFullLeaderboard);       // Auth: combined — top50 (cached) + me + aroundMe
+gameRouter.get("/global/leaderboard/top", getLeaderboard);                    // Public: top N players
+gameRouter.get("/global/leaderboard/me", requireAuth, getMyRank);             // Auth: get my rank + players around me (?range=5)
+gameRouter.post("/global/leaderboard/level", requireAuth, submitScore);        // Auth: submit/update level to leaderboard sorted set
+
+// ──Monthly Leaderboard ──
+gameRouter.get("/monthly/leaderboard", requireAuth, getFullMonthlyLeaderboard);   // Auth: combined — top50 (cached) + me + aroundMe
+gameRouter.get("/monthly/leaderboard/top", getMonthlyLeaderboardTop);             // Public: top N players
+gameRouter.get("/monthly/leaderboard/me", requireAuth, getMyMonthlyRank);         // Auth: get my rank + players around me (?range=5)
+
+gameRouter.post("/monthly/leaderboard/score", requireAuth, submitMonthlyScore);   // Auth: submit/increment score in monthly sorted set
+
+// Auth: clear monthly leaderboard data
+gameRouter.delete("/monthly/leaderboard/clear", clearMonthlyLeaderboard);
+
+// Claim monthly winner reward: update claimed boolean for a specific user
+gameRouter.patch("/monthly/winners/claim", updateMonthlyWinnerClaim);
+gameRouter.patch("/monthly/winners/claim/:profileId", updateMonthlyWinnerClaim);
+gameRouter.patch("/monthly/leaderboard/winners/claim", updateMonthlyWinnerClaim);
+
+// Public alias: get latest monthly winners (top 5 of the most recent month)
+gameRouter.get("/monthly/winners/latest", getLatestMonthlyWinners);
+gameRouter.get("/monthly/leaderboard/winners/latest", getLatestMonthlyWinners);
+
+// Public alias: get all monthly winners
+gameRouter.get("/monthly/winners", getMonthlyWinners);                              // Public: get all monthly winners (with profileData & username)
+gameRouter.get("/monthly/leaderboard/winners", getMonthlyWinners); 
