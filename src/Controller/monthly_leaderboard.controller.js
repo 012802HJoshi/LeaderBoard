@@ -300,7 +300,7 @@ export const getLatestMonthlyWinners = async (req, res) => {
             .sort({ month: -1, _id: -1 });
 
         if (!latestDoc) {
-            return res.status(404).json({
+            return res.status(200).json({
                 message: "No monthly winners found",
                 month: null,
                 winners: [],
