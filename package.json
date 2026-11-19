@@ -8,7 +8,8 @@
     "start:prod": "NODE_ENV=production node src/index.js",
     "load-test": "npx -y artillery run load-test.yml",
     "seed:leaderboard": "node src/scripts/seed-leaderboard.js",
-    "clear:all": "node src/scripts/clear-all.js"
+    "clear:all": "node src/scripts/clear-all.js",
+    "remove:banned": "node src/scripts/remove-banned-user.js"
   },
   "repository": {
     "type": "git",

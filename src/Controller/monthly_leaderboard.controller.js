@@ -1,6 +1,7 @@
 import GameProfile from "../Model/game_profile.model.js";
 import MonthlyWinner from "../Model/monthly_winner.model.js";
 import mongoose from "mongoose";
+import { isMonthlyLeaderboardBanned } from "../Constants/game.constants.js";
 import {
     getMonthlyTopPlayers,
     getMonthlyPlayerRank,
@@ -29,7 +30,9 @@ const enrichEntries = async (entries, currentProfileId = null) => {
         profiles.map((p) => [p._id.toString(), p])
     );
 
-    return entries.map((entry) => {
+    return entries
+        .filter((entry) => !isMonthlyLeaderboardBanned(entry.profileId))
+        .map((entry) => {
         const profile = profileMap.get(entry.profileId);
         return {
             rank: entry.rank,
@@ -88,7 +91,7 @@ export const getFullMonthlyLeaderboard = async (req, res) => {
             endTime: getMonthlyEndTime(),
         };
 
-        if (profileId) {
+        if (profileId && !isMonthlyLeaderboardBanned(profileId)) {
             const { rank } = await getMonthlyPlayerRank(profileId);
             if (rank !== null && rank > 45) {
                 const neighbors = await getMonthlyPlayerNeighbors(profileId, range);
@@ -152,6 +155,14 @@ export const getMonthlyLeaderboardTop = async (req, res) => {
 export const getMyMonthlyRank = async (req, res) => {
     try {
         const profileId = req.profileId;
+
+        if (isMonthlyLeaderboardBanned(profileId)) {
+            return res.status(403).json({
+                message: "Player is not eligible for monthly leaderboard",
+                endTime: getMonthlyEndTime(),
+            });
+        }
+
         const range = Math.min(Math.max(parseInt(req.query.range) || 5, 1), 25);
 
         const { rank, score } = await getMonthlyPlayerRank(profileId);
@@ -201,6 +212,13 @@ export const getMyMonthlyRank = async (req, res) => {
 export const submitMonthlyScore = async (req, res) => {
     try {
         const profileId = req.profileId;
+
+        if (isMonthlyLeaderboardBanned(profileId)) {
+            return res.status(403).json({
+                message: "Player is not eligible to submit scores to the monthly leaderboard",
+            });
+        }
+
         const body = req.body || {};
         const rawValue = body.score !== undefined ? body.score : (body.value !== undefined ? body.value : body.increment);
 

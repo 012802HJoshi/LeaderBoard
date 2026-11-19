@@ -1,4 +1,5 @@
 import { getRedisClient } from "../Config/connectRedis.js";
+import { isMonthlyLeaderboardBanned } from "../Constants/game.constants.js";
 
 const MONTHLY_LEADERBOARD_KEY = "leaderboard:monthly";
 const MONTHLY_TOP50_CACHE_KEY = "leaderboard:monthly:top50:cache";
@@ -56,6 +57,10 @@ export const setCachedMonthlyTop50 = async (enrichedData) => {
  * @returns {Promise<{ newScore: number, rank: number }>}
  */
 export const incrementMonthlyScore = async (profileId, value) => {
+    if (isMonthlyLeaderboardBanned(profileId)) {
+        return { newScore: 0, rank: null };
+    }
+
     const redis = getRedisClient();
 
     const oldRank = await redis.zrevrank(MONTHLY_LEADERBOARD_KEY, profileId);
